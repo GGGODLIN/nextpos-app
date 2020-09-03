@@ -1,10 +1,10 @@
-import React from 'react'
-import {FlatList, RefreshControl, Text, TouchableOpacity, View} from 'react-native'
+import React, {Component} from 'react'
+import {Animated, PanResponder, FlatList, RefreshControl, Text, TouchableOpacity, View, Dimensions} from 'react-native'
 import {connect} from 'react-redux'
 import AddBtn from '../components/AddBtn'
 import OrderStart from './OrderStart'
 import OrderItem from './OrderItem'
-import {getfetchOrderInflights, getMostRecentShiftStatus, getShiftStatus, getTableLayouts, getTablesAvailable,} from '../actions'
+import {getfetchOrderInflights, getMostRecentShiftStatus, getShiftStatus, getTableLayouts, getTablesAvailable, } from '../actions'
 import styles from '../styles'
 import {successMessage} from '../constants/Backend'
 import {LocaleContext} from '../locales/LocaleContext'
@@ -20,6 +20,8 @@ import {StyledText} from "../components/StyledText";
 import {withContext} from "../helpers/contextHelper";
 import {compose} from "redux";
 import StyledTextInput from "../components/StyledTextInput";
+import {withAnchorPoint} from 'react-native-anchor-point';
+
 
 class TablesScreen extends React.Component {
   static navigationOptions = {
@@ -30,9 +32,16 @@ class TablesScreen extends React.Component {
   constructor(props, context) {
     super(props, context)
 
+    const windowWidth = Dimensions.get('window').width;
+    const windowHeight = Dimensions.get('window').height;
+    console.log("SCREEN SIZE", windowWidth, windowHeight);
+
     this.state = {
       openBalance: 0,
-      refreshing: false
+      refreshing: false,
+      windowWidth: Dimensions.get('window').width,
+      windowHeight: Dimensions.get('window').height,
+      scaleMultiple: (Dimensions.get('window').width - 30) / 300,
     }
   }
 
@@ -100,6 +109,13 @@ class TablesScreen extends React.Component {
     })
   }
 
+  getTransform = () => {
+    let transform = {
+      transform: [{scale: this.state.scaleMultiple}],
+    };
+    return withAnchorPoint(transform, {x: 0, y: 0}, {width: 300, height: 300});
+  };
+
   handleOpenShift = (balance) => {
     handleOpenShift(balance, (response) => {
       this.loadInfo()
@@ -121,10 +137,11 @@ class TablesScreen extends React.Component {
       themeStyle
     } = this.props
     const {t} = this.context
+    //console.log("props", this.props.tablelayouts);
 
     if (isLoading) {
       return (
-        <LoadingScreen/>
+        <LoadingScreen />
       )
     } else if (tablelayouts === undefined || tablelayouts.length === 0) {
       return (
@@ -139,8 +156,8 @@ class TablesScreen extends React.Component {
 
           <View style={styles.fullWidthScreen}>
             <ScreenHeader backNavigation={false}
-                          parentFullScreen={true}
-                          title={t('menu.tables')}
+              parentFullScreen={true}
+              title={t('menu.tables')}
             />
             <StyledText style={styles.messageBlock}>{t('noTableLayout')}</StyledText>
           </View>
@@ -151,8 +168,8 @@ class TablesScreen extends React.Component {
         <ThemeContainer>
           <View style={[styles.fullWidthScreen]}>
             <ScreenHeader backNavigation={false}
-                          parentFullScreen={true}
-                          title={t('menu.tables')}
+              parentFullScreen={true}
+              title={t('menu.tables')}
             />
             <View>
               <StyledText style={styles.messageBlock}>{t('shiftClosing')}</StyledText>
@@ -261,15 +278,15 @@ class TablesScreen extends React.Component {
 
           <View style={styles.fullWidthScreen}>
             <ScreenHeader backNavigation={false}
-                          title={t('menu.tables')}
-                          parentFullScreen={true}
-                          rightComponent={
-                            <AddBtn
-                              onPress={() =>
-                                this.props.navigation.navigate('OrderStart')
-                              }
-                            />
-                          }
+              title={t('menu.tables')}
+              parentFullScreen={true}
+              rightComponent={
+                <AddBtn
+                  onPress={() =>
+                    this.props.navigation.navigate('OrderStart')
+                  }
+                />
+              }
             />
 
             {tablelayouts.map((tblLayout, idx) => (
@@ -341,8 +358,25 @@ class TablesScreen extends React.Component {
                 keyExtractor={(item, idx) => item.orderId}
               />
             </View>
+            <Text>{this.state.scaleMultiple}</Text>
+            <View style={{backgroundColor: 'gray'}}>
+              <View style={{justifyContent: 'flex-start', marginTop: 22, backgroundColor: 'pink', alignSelf: 'center', height: (this.state.windowWidth - 30), width: (this.state.windowWidth - 30)}}>
+                <View style={[this.getTransform(), {backgroundColor: 'green', height: 300, width: 300}]}>
+                  {
+                    tablelayouts[0]?.tables?.map(table => {
+                      return (<Draggable
+                        table={table}
+                        key={table.tableId}
+                        layoutId={1}
+                        getTableLayout={this.props.getTableLayout}
+                      />)
+                    })
+                  }
+                </View>
+              </View>
+            </View>
 
-            <View style={[styles.bottom, styles.horizontalMargin]}>
+            <View style={styles.bottomButtonContainerWithoutFlex}>
               <TouchableOpacity onPress={() => navigation.navigate('OrderDisplayScreen')}>
                 <Text style={[styles.bottomActionButton, styles.actionButton]}>
                   {t('menu.orderDisplay')}
@@ -363,7 +397,7 @@ const mapStateToProps = state => ({
   ordersInflight: state.ordersinflight.data.orders,
   haveData: state.ordersinflight.haveData && state.tablelayouts.haveData,
   haveError: state.ordersinflight.haveError || state.tablelayouts.haveError,
-  isLoading: state.ordersinflight.loading ||  state.tablelayouts.loading,
+  isLoading: state.ordersinflight.loading || state.tablelayouts.loading,
   shiftStatus: state.shift.data.shiftStatus,
   availableTables: state.tablesavailable.data.availableTables,
   client: state.client.data,
@@ -389,3 +423,139 @@ const enhance = compose(
   withContext
 )
 export default enhance(TablesScreen)
+
+class Draggable extends Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      dropAreaValues: null,
+      pan: new Animated.ValueXY(),
+      opacity: new Animated.Value(1)
+    };
+  }
+
+  componentDidMount() {
+    if (this.props.table.position != null) {
+      this.state.pan.setValue({x: Number(this.props.table.position.x), y: Number(this.props.table.position.y)})
+    } else {
+      this.state.pan.setValue({x: 0, y: 0})
+    }
+  }
+
+  UNSAFE_componentWillMount() {
+    this.panResponder = PanResponder.create({
+      onStartShouldSetPanResponder: (evt, gestureState) => true,
+      onPanResponderGrant: (e, gesture) => {
+        this.state.pan.setOffset({
+          x: this.state.pan.x._value,
+          y: this.state.pan.y._value
+        })
+        //this.state.pan.setValue({ x:0, y:0})
+      },
+      onPanResponderMove: Animated.event([
+        null, {dx: this.state.pan.x, dy: this.state.pan.y}
+      ]),
+      onPanResponderRelease: (e, gesture) => {
+        this.state.pan.flattenOffset();
+        console.log(`on release: ${JSON.stringify(this.state.pan)}`)
+
+        if (this.isDropArea(e, gesture)) {
+          Animated.timing(this.state.opacity, {
+            toValue: 0,
+            duration: 1000
+          }).start();
+        }
+      }
+    });
+  }
+
+  isDropArea(e, gesture) {
+    const layoutId = this.props.layoutId;
+    const tableId = this.props.table.tableId;
+    console.debug(`event: ${e.nativeEvent.locationX} ${e.nativeEvent.locationY} ${e.nativeEvent.pageX} ${e.nativeEvent.pageY}`)
+    console.debug(`gesture: ${JSON.stringify(gesture)}`)
+    console.debug(this.state.pan)
+
+    // dispatchFetchRequest(api.tablelayout.updateTablePosition(layoutId, tableId), {
+    //   method: 'POST',
+    //   withCredentials: true,
+    //   credentials: 'include',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify({x: JSON.stringify(this.state.pan.x), y: JSON.stringify(this.state.pan.y)})
+    // }, response => {
+    //   this.props.getTableLayout(layoutId)
+    // }).then()
+
+    return true
+  }
+
+  handleReset = (layoutId, tableId) => {
+    dispatchFetchRequest(api.tablelayout.updateTablePosition(layoutId, tableId), {
+      method: 'POST',
+      withCredentials: true,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({})
+    }, response => {
+      this.props.getTableLayout(layoutId)
+    }).then()
+    return true
+  }
+
+  renderDraggable(layoutId, table) {
+    const panStyle = {
+      transform: this.state.pan.getTranslateTransform()
+    }
+
+    return (
+      <View style={{padding: 4}}>
+        {
+          table.position !== null
+            ?
+            <View>
+              <View key={table.tableId}>
+                {/* <StyledText style={{
+                  //borderWidth: 0.5,
+                  textAlign: 'center',
+                  padding: 4,
+                  fontSize: 12,
+                  borderRadius: 4,
+                  width: 60
+                }}>
+                </StyledText> */}
+              </View>
+              <Animated.View
+
+                style={[panStyle, styles.circle, {position: 'absolute'}]}
+              >
+                <Text onPress={() => {console.log(table.tableName)}} style={{color: '#fff', textAlign: 'center', marginTop: 15}}>{table.tableName}</Text>
+              </Animated.View>
+            </View>
+            :
+            <Animated.View
+
+              style={[panStyle, styles.circle, {marginTop: 8}]}
+            >
+              <Text onPress={() => {console.log(table.tableName)}} style={{color: '#fff', textAlign: 'center', marginTop: 15}}>{table.tableName}</Text>
+            </Animated.View>
+        }
+      </View>
+    );
+  }
+
+  render() {
+    const {table, layoutId} = this.props
+    return (
+      <View style={{alignItems: "flex-start", borderWidth: 0, marginBottom: 0}} ref='self'>
+        {this.renderDraggable(layoutId, table)}
+      </View>
+    );
+  }
+}
+
+//https://snack.expo.io/@yoobidev/draggable-component

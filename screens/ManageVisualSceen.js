@@ -40,14 +40,14 @@ class ManageVisualSceen extends Component {
 
     if (isLoading) {
       return (
-        <LoadingScreen/>
+        <LoadingScreen />
       )
     }
 
     return (
       <ThemeContainer>
         <View style={[styles.container]}>
-          <ScreenHeader title={t('manageVisualLayoutTitle')}/>
+          <ScreenHeader title={t('manageVisualLayoutTitle')} />
           {/* <Text onPress={() => this.forceRefresh()} style={{ borderWidth: 1, width: 120, textAlign: 'center', padding: 8, borderRadius: 2 }}>Reset Positions</Text> */}
           <View style={{flex: 1}}>
             <View style={[styles.ballContainer, {paddingLeft: 8, height: '100%', marginTop: 22}]}>
@@ -183,7 +183,7 @@ class Draggable extends Component {
             ?
             <View>
               <TouchableOpacity key={table.tableId}
-                                onPress={() => this.handleReset(layoutId, table.tableId)}>
+                onPress={() => this.handleReset(layoutId, table.tableId)}>
                 <StyledText style={{
                   borderWidth: 0.5,
                   textAlign: 'center',

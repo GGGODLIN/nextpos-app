@@ -612,7 +612,8 @@ export default StyleSheet.create({
     borderRadius: CIRCLE_RADIUS
   },
   ballContainer: {
-    height: 600,
+    //height: 300,
+    width: 300,
     borderWidth: 1,
     borderColor: mainThemeColor
   },
@@ -648,5 +649,10 @@ export default StyleSheet.create({
   withoutBorder: {
     borderWidth: 0
   },
-  hitSlop: {top: 20, bottom: 20, left: 50, right: 50}
+  hitSlop: {top: 20, bottom: 20, left: 50, right: 50},
+  bottomButtonContainerWithoutFlex: {
+    marginTop: 10,
+    marginBottom: 10,
+    marginHorizontal: 15
+  },
 })
