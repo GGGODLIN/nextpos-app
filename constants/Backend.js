@@ -219,6 +219,12 @@ export const api = {
     },
     createOffer: `${apiRoot}/offers`
   },
+  splitOrder: {
+    new: `${apiRoot}/splitOrders`,
+    moveItem: orderId => {
+      return `${apiRoot}/splitOrders/${orderId}`
+    },
+  },
   printer: {
     create: `${apiRoot}/printers`,
     getPrinters: `${apiRoot}/printers`,

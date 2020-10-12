@@ -48,6 +48,7 @@ class OrderFormII extends React.Component {
         selectItemToDeliver: 'Please select a line item to deliver',
         deliverOrder: 'Deliver',
         payOrder: 'Payment',
+        splitBill: 'Spilt Bill',
         completeOrder: 'Complete',
         stateTip: {
           open: {
@@ -86,6 +87,7 @@ class OrderFormII extends React.Component {
         selectItemToDeliver: '請選擇品項送餐',
         deliverOrder: '送餐完畢',
         payOrder: '付款',
+        splitBill: '拆帳',
         completeOrder: '結束訂單',
         stateTip: {
           open: {
@@ -377,7 +379,6 @@ class OrderFormII extends React.Component {
 
       productsData
     } = this.props
-    console.log("NewOrderItem", order)
 
     const {reverseThemeStyle, t} = this.context
     const map = new Map(Object.entries(products))
@@ -545,19 +546,35 @@ class OrderFormII extends React.Component {
                     )}
 
                     {order.state === 'DELIVERED' && (
-                      <View style={{flex: 1, marginHorizontal: 5}}>
-                        <TouchableOpacity
-                          onPress={() =>
-                            order.lineItems.length === 0
-                              ? warningMessage(t('lineItemCountCheck'))
-                              : this.props.navigation.navigate('Payment', {
-                                order: order
-                              })
-                          }
-                          style={styles.flexButtonSecondAction}
-                        >
-                          <Text style={styles.flexButtonSecondActionText}>{t('payOrder')}</Text>
-                        </TouchableOpacity>
+                      <View style={{flex: 1, marginHorizontal: 5, flexDirection: 'row'}}>
+                        <View style={{flex: 2, marginHorizontal: 5}}>
+                          <TouchableOpacity
+                            onPress={() =>
+                              order.lineItems.length === 0
+                                ? warningMessage(t('lineItemCountCheck'))
+                                : this.props.navigation.navigate('Payment', {
+                                  order: order
+                                })
+                            }
+                            style={styles.flexButtonSecondAction}
+                          >
+                            <Text style={styles.flexButtonSecondActionText}>{t('payOrder')}</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={{flex: 1, marginHorizontal: 5}}>
+                          <TouchableOpacity
+                            onPress={() =>
+                              order.lineItems.length === 0
+                                ? warningMessage(t('lineItemCountCheck'))
+                                : this.props.navigation.navigate('SpiltBillScreen', {
+                                  order: order
+                                })
+                            }
+                            style={styles.flexButtonSecondAction}
+                          >
+                            <Text style={styles.flexButtonSecondActionText}>{t('splitBill')}</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
 
                     )}
