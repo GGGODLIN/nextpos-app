@@ -564,11 +564,9 @@ class OrderFormII extends React.Component {
                         <View style={{flex: 1, marginHorizontal: 5}}>
                           <TouchableOpacity
                             onPress={() =>
-                              order.lineItems.length === 0
-                                ? warningMessage(t('lineItemCountCheck'))
-                                : this.props.navigation.navigate('SpiltBillScreen', {
-                                  order: order
-                                })
+                              this.props.navigation.navigate('SpiltBillScreen', {
+                                order: order
+                              })
                             }
                             style={styles.flexButtonSecondAction}
                           >

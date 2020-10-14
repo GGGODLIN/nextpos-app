@@ -366,10 +366,11 @@ class CheckoutComplete extends React.Component {
               <View>
                 <TouchableOpacity
                   onPress={() => {
-                    if (printers.length > 0)
-                      this.handlePrint(this.state?.invoiceXML, this.state.printer.ipAddress, true)
-                    else
-                      console.warn('no printer')
+                    if (!!this.state.printer) {
+                      if (!!this.state?.invoiceXML)
+                        this.handlePrint(this.state?.invoiceXML, this.state.printer.ipAddress, true)
+                    }
+
                   }}
                 >
                   <Text style={[styles.bottomActionButton, styles.actionButton]}>
@@ -380,10 +381,9 @@ class CheckoutComplete extends React.Component {
               <View>
                 <TouchableOpacity
                   onPress={() => {
-                    if (printers.length > 0)
+                    if (!!this.state.printer)
                       this.handlePrint(this.state?.receiptXML, this.state.printer.ipAddress, false)
-                    else
-                      console.warn('no printer')
+
                   }}
                 >
                   <Text style={[styles.bottomActionButton, styles.actionButton]}>

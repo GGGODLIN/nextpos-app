@@ -17,6 +17,8 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import PaymentDiscountModal from './PaymentDiscountModal'
 import {api, dispatchFetchRequestWithOption, successMessage} from '../constants/Backend'
 import {isGuiNumberValid} from 'taiwan-id-validator2'
+import {handleDelete} from "../helpers/orderActions";
+import NavigationService from "../navigation/NavigationService";
 
 class PaymentFormScreenTablet extends React.Component {
     static navigationOptions = {
@@ -119,7 +121,18 @@ class PaymentFormScreenTablet extends React.Component {
         }, {
             defaultMessage: false
         }, response => {
-            this.props.navigation.navigate('TablesSrc')
+            if (!!this.props?.isSplitting) {
+                if (this.props?.parentOrder?.lineItems.length !== 0) {
+                    this.props.navigation.navigate('SpiltBillScreen', {
+                        order: this.props?.parentOrder
+                    })
+                } else {
+                    handleDelete(this.props?.parentOrder?.orderId, () => NavigationService.navigate('TablesSrc'))
+                    this.props.navigation.navigate('TablesSrc')
+                }
+
+            } else
+                this.props.navigation.navigate('TablesSrc')
         }).then()
     }
 
@@ -155,7 +168,9 @@ class PaymentFormScreenTablet extends React.Component {
             response.json().then(data => {
                 this.props.navigation.navigate('CheckoutComplete', {
                     transactionResponse: data,
-                    onSubmit: this.handleComplete
+                    onSubmit: this.handleComplete,
+                    isSplitting: this.props?.isSplitting ?? false,
+                    parentOrder: this.props?.parentOrder ?? null,
                 })
             })
         }).then()
@@ -524,8 +539,8 @@ const mapStateToProps = (state, props) => ({
     order: state.order.data,
 })
 
-const mapDispatchToProps = dispatch => ({
-    getOrder: id => dispatch(getOrder(id)),
+const mapDispatchToProps = (dispatch, props) => ({
+    getOrder: () => dispatch(getOrder(props.order.orderId)),
     getfetchglobalOrderOffers: () => dispatch(getfetchglobalOrderOffers())
 })
 

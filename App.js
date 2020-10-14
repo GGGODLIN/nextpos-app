@@ -126,7 +126,9 @@ export default class App extends React.Component {
       themeStyle: themes.light,
       reverseThemeStyle: themes.dark,
       complexTheme: complexTheme.light,
-      toggleTheme: this.toggleTheme
+      toggleTheme: this.toggleTheme,
+      splitOrderId: null,
+      saveSplitOrderId: this.saveSplitOrderId
     }
 
     TimeZoneService.setClientReference(() => store.getState().client)
@@ -159,6 +161,7 @@ export default class App extends React.Component {
         isTablet: (isTablet !== 1)
       })
     })
+    this.saveSplitOrderId()
   }
 
   mergeLocaleResource = async locales => {
@@ -231,6 +234,38 @@ export default class App extends React.Component {
     })
   }
 
+  saveSplitOrderId = async (id = null) => {
+    if (!!id) {
+      if (id === 'delete') {
+        console.log('delete id')
+        await AsyncStorage.removeItem('splitOrderId')
+        this.setState({
+          splitOrderId: null
+        })
+      } else {
+        await AsyncStorage.setItem('splitOrderId', id)
+        this.setState({
+          splitOrderId: id
+        })
+      }
+
+    } else {
+      try {
+        AsyncStorage.getItem('splitOrderId').then(val => {
+          if (!val) {
+            return Promise.resolve()
+          } else {
+            this.setState({
+              splitOrderId: val
+            })
+          }
+        })
+      } catch (e) {
+        return Promise.resolve()
+      }
+    }
+  }
+
   render() {
     if (!this.state.isLoadingComplete && !this.props.skipLoadingScreen) {
       return (
@@ -257,7 +292,9 @@ export default class App extends React.Component {
               reverseThemeStyle: this.state.reverseThemeStyle,
               complexTheme: this.state.complexTheme,
               toggleTheme: this.state.toggleTheme,
-              isTablet: this.state.isTablet
+              isTablet: this.state.isTablet,
+              splitOrderId: this.state?.splitOrderId,
+              saveSplitOrderId: this.state.saveSplitOrderId,
             }}>
               <LocaleContext.Provider value={this.state}>
                 <AppNavigator

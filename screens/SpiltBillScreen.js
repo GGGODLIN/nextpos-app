@@ -23,6 +23,9 @@ import {handleDelete, handleOrderSubmit, renderChildProducts, renderOptionsAndOf
 import {SwipeRow} from 'react-native-swipe-list-view'
 import ScreenHeader from "../components/ScreenHeader";
 import Icon from 'react-native-vector-icons/FontAwesome'
+import {MainActionButton, MainActionFlexButton} from "../components/ActionButtons";
+import {NavigationEvents} from 'react-navigation'
+
 
 
 class SpiltBillScreen extends React.Component {
@@ -43,13 +46,18 @@ class SpiltBillScreen extends React.Component {
             }
         })
         this.state = {
-
+            splitOrderId: context?.splitOrderId ?? null,
+            splitOrderData: null,
         }
+        console.log('context', context?.splitOrderId, context?.saveSplitOrderId)
 
     }
 
     componentDidMount() {
         console.log('SpiltBillScreen', this.props.order)
+        if (!!this.state.splitOrderId) {
+            this.getSplitOrder(this.state.splitOrderId)
+        }
         // this.getXML(this.props.navigation.state.params?.transactionResponse?.transactionId)
         // this.getOnePrinter()
         // this.props.getWorkingAreas()
@@ -65,71 +73,14 @@ class SpiltBillScreen extends React.Component {
         // }
     }
 
-    getOnePrinter = () => {
-        dispatchFetchRequest(
-            api.printer.getOnePrinter,
-            {
-                method: 'GET',
-                withCredentials: true,
-                credentials: 'include',
-                headers: {}
-            },
-            response => {
-                response.json().then(data => {
-                    this.setState({printer: data})
-                })
-            },
-            response => {
-                console.warn('getOnePrinter ERROR')
-            }
-        ).then()
 
 
-    }
 
-    getXML = (transactionId) => {
-        dispatchFetchRequestWithOption(api.payment.getTransaction(transactionId), {
-            method: 'GET',
-            withCredentials: true,
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-        }, {
-            defaultMessage: false
-        }, response => {
-            response.json().then(data => {
 
-                this.setState({receiptXML: data?.receiptXML, invoiceXML: data?.invoiceXML})
-            })
-        }).then()
-    }
 
-    handlePrint = (xml, ipAddress, isInvoice) => {
-        if (isInvoice) {
-            printMessage(xml, ipAddress, () => {
-                this.setState({isInvoicePrint: true})
-
-            }, () => {
-                this.setState({isInvoicePrint: false})
-            }
-            )
-        }
-        else {
-            printMessage(xml, ipAddress, () => {
-                this.setState({isReceiptPrint: true})
-
-            }, () => {
-                this.setState({isReceiptPrint: false})
-            }
-            )
-        }
-    }
-
-    addItem = (item) => {
-        console.log('addItem', item)
-        console.log('addItem2', this.props.navigation.state.params?.order)
-        dispatchFetchRequestWithOption(api.splitOrder.new, {
+    addItem = async (item) => {
+        let url = !!this.state.splitOrderId ? api.splitOrder.moveItem(this.state.splitOrderId) : api.splitOrder.new
+        await dispatchFetchRequestWithOption(url, {
             method: 'POST',
             withCredentials: true,
             credentials: 'include',
@@ -146,9 +97,84 @@ class SpiltBillScreen extends React.Component {
 
             response?.json().then(data => {
                 this.props.getOrder()
+                this.context?.saveSplitOrderId(data?.orderId)
+                this.getSplitOrder(data?.orderId)
                 console.log('Back data', data)
             })
         }).then()
+    }
+
+    deleteItem = async (item) => {
+        let url = api.splitOrder.moveItem(this.props.navigation.state.params?.order?.orderId)
+        await dispatchFetchRequestWithOption(url, {
+            method: 'POST',
+            withCredentials: true,
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sourceOrderId: this.state.splitOrderId,
+                sourceLineItemId: item?.lineItemId
+            })
+        }, {
+            defaultMessage: false
+        }, response => {
+
+            response?.json().then(data => {
+                this.props.getOrder()
+                this.context?.saveSplitOrderId(this.state.splitOrderId)
+                this.getSplitOrder(this.state.splitOrderId)
+                console.log('Back data', data)
+            })
+        }).then()
+    }
+
+    deleteSplitOrder = () => {
+        const formData = new FormData()
+        formData.append('sourceOrderId', this.props.navigation.state.params?.order?.orderId)
+        console.log('formData', formData, this.state.splitOrderId)
+        dispatchFetchRequestWithOption(api.splitOrder.delete(this.state.splitOrderId), {
+            method: 'POST',
+            withCredentials: true,
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: formData
+        }, {
+            defaultMessage: false
+        }, response => {
+            response?.json().then(data => {
+                this.props.getOrder()
+                this.context?.saveSplitOrderId('delete')
+                this.setState({splitOrderData: null, splitOrderId: null})
+                console.log('Back data', data)
+            })
+        }).then()
+        // this.context?.saveSplitOrderId('delete')
+        // this.setState({splitOrderData: null, splitOrderId: null})
+    }
+
+    getSplitOrder = async (id) => {
+        await dispatchFetchRequest(
+            api.order.getById(id),
+            {
+                method: 'GET',
+                withCredentials: true,
+                credentials: 'include',
+                headers: {}
+            },
+            response => {
+                response.json().then(data => {
+                    this.setState({splitOrderData: data, splitOrderId: data?.orderId})
+                    console.log('getSplitOrder', data)
+                })
+            },
+            response => {
+                this.setState({splitOrderData: null, splitOrderId: null})
+            }
+        ).then()
     }
 
     render() {
@@ -169,7 +195,16 @@ class SpiltBillScreen extends React.Component {
                 <ThemeContainer>
                     <View style={[styles.container]}>
                         <ScreenHeader backNavigation={true}
+                            backAction={() => {
+                                this.props.navigation.goBack()
+                                !!this.state?.splitOrderData && this.deleteSplitOrder()
+                            }}
                             title={t('SpiltBillScreenTitle')} />
+                        <NavigationEvents
+                            onWillFocus={() => {
+                                this.props.getOrder()
+                            }}
+                        />
                         <View style={{flexDirection: 'row', flex: 1}}>
                             <View style={{
                                 flex: 1,
@@ -182,47 +217,83 @@ class SpiltBillScreen extends React.Component {
                                         {order?.lineItems?.length > 0 ?
                                             order?.lineItems?.map((item, index) => {
                                                 return (
-                                                    <SwipeRow
-                                                        leftOpenValue={50}
-                                                        rightOpenValue={-50}
-                                                        ref={(e) => this[`ref_${index}`] = e}
-                                                    >
-                                                        <View style={{flex: 1, marginBottom: '3%', borderRadius: 10, width: '100%', flexDirection: 'row'}}>
-                                                            <View style={{flex: 1, borderRadius: 10}} >
-                                                                <TouchableOpacity
-                                                                    onPress={() => {
-                                                                        this[`ref_${index}`]?.closeRow()
-                                                                        if (item.price === 0) {
-                                                                            this.handleFreeLineitem(order.orderId, item.lineItemId, false)
-                                                                        } else {
-                                                                            this.handleFreeLineitem(order.orderId, item.lineItemId, true)
-                                                                        }
-                                                                    }}
-                                                                    style={{flex: 1, backgroundColor: mainThemeColor, borderRadius: 10, paddingLeft: 5, alignItems: 'flex-start', justifyContent: 'center'}}>
-                                                                    <StyledText style={{width: 40}}>{item.price === 0 ? t('order.cancelFreeLineitem') : t('order.freeLineitem')}</StyledText>
-                                                                </TouchableOpacity>
+
+
+
+                                                    <TouchableOpacity style={[reverseThemeStyle, {marginBottom: 16, borderRadius: 10}, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}
+                                                        activeOpacity={0.8}
+                                                        onPress={() => {this.addItem(item)}}>
+                                                        <View style={{aspectRatio: 3, alignItems: 'center', flexDirection: 'row'}}>
+                                                            <View style={{flex: 2.5, flexDirection: 'column', paddingLeft: '3%'}}>
+                                                                <StyledText style={[{...reverseThemeStyle, fontSize: 16, fontWeight: 'bold'}, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{item.productName} ${item.price} {`X${item.quantity}`}</StyledText>
+                                                                {!!item?.options && <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{item.options}</StyledText>}
+                                                                {!!item?.appliedOfferInfo && <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{` ${item?.appliedOfferInfo?.offerName}(${item?.appliedOfferInfo?.overrideDiscount})`}</StyledText>}
                                                             </View>
-                                                            <View style={{...styles.delIcon, flex: 1, borderRadius: 10}} >
-                                                                <DeleteBtn
-                                                                    handleDeleteAction={() => {
-                                                                        this[`ref_${index}`]?.closeRow()
-                                                                        this.handleDeleteLineItem(
-                                                                            order.orderId,
-                                                                            item.lineItemId
-                                                                        );
+                                                            <View style={{flexDirection: 'column', flex: 1, paddingRight: '3%', justifyContent: 'space-around', height: '100%', alignItems: 'flex-end', borderLeftWidth: 1}} >
+                                                                {['IN_PROCESS', 'ALREADY_IN_PROCESS'].includes(item?.state) && <TouchableOpacity
+                                                                    onPress={() => {
+                                                                        this.setState({
+                                                                            choosenItem: {...this.state?.choosenItem, [item.lineItemId]: !this.state?.choosenItem?.[item.lineItemId] ?? false}
+                                                                        });
+                                                                        this.toggleOrderLineItem(item.lineItemId);
                                                                     }}
-                                                                    islineItemDelete={true}
-                                                                    containerStyle={{flex: 1, width: '100%', justifyContent: 'center', alignItems: 'flex-end'}}
-                                                                />
+                                                                >
+                                                                    <StyledText style={{...reverseThemeStyle, padding: 5, backgroundColor: 'gray', shadowColor: '#000', shadowOffset: {width: 1, height: 1}, shadowOpacity: 1}}>{t('choose')}</StyledText>
+                                                                </TouchableOpacity>}
+                                                                <View>
+                                                                    {item?.state === 'OPEN' && <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{t('stateTip.open.display')}</StyledText>}
+                                                                    {['IN_PROCESS', 'ALREADY_IN_PROCESS'].includes(item?.state) && (
+                                                                        <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{t('stateTip.inProcess.display')}</StyledText>
+                                                                    )}
+                                                                    {item?.state === 'PREPARED' && <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{t('stateTip.prepared.display')}</StyledText>}
+                                                                    {item?.state === 'DELIVERED' && (
+                                                                        <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{t('stateTip.delivered.display')}</StyledText>
+                                                                    )}
+                                                                    {item?.state === 'SETTLED' && <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{t('stateTip.settled.display')}</StyledText>}
+                                                                </View>
+                                                                <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{item.lineItemSubTotal}</StyledText>
                                                             </View>
                                                         </View>
+                                                    </TouchableOpacity>
 
-                                                        <TouchableOpacity style={[reverseThemeStyle, {marginBottom: '3%', borderRadius: 10}, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}
+                                                )
+                                            })
+                                            : <StyledText style={{alignSelf: 'center'}}>{t('nothing')}</StyledText>}
+                                    </ScrollView>
+                                </View>
+                                <View style={{flex: 1, marginVertical: 5, justifyContent: 'space-between'}}>
+
+
+                                    <StyledText style={{textAlign: 'left'}}>{t('order.discount')} ${order.discount}</StyledText>
+                                    <StyledText style={{textAlign: 'left'}}>{t('order.serviceCharge')} ${order.serviceCharge}</StyledText>
+
+                                    <StyledText style={{textAlign: 'left'}}>{t('order.total')} ${order.orderTotal}</StyledText>
+
+
+                                </View>
+                            </View>
+                            <View style={{
+                                flex: 2,
+                                justifyContent: 'center',
+                                marginTop: 8,
+                                marginBottom: 5,
+                                marginLeft: 32
+                            }}>
+                                {!!this.state.splitOrderData && !!this.state.splitOrderId && <View style={{flex: 1}}>
+                                    <View style={{flex: 7}}>
+                                        <ScrollView style={{flex: 1}}>
+                                            {this.state.splitOrderData?.lineItems?.length > 0 ?
+                                                this.state.splitOrderData?.lineItems?.map((item, index) => {
+                                                    return (
+
+
+
+                                                        <TouchableOpacity style={[reverseThemeStyle, {marginBottom: 16, borderRadius: 10}, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}
                                                             activeOpacity={0.8}
-                                                            onPress={() => {this.addItem(item)}}>
-                                                            <View style={{aspectRatio: 1.5, alignItems: 'center', flexDirection: 'row'}}>
+                                                            onPress={() => {this.deleteItem(item)}}>
+                                                            <View style={{aspectRatio: 6, alignItems: 'center', flexDirection: 'row'}}>
                                                                 <View style={{flex: 2.5, flexDirection: 'column', paddingLeft: '3%'}}>
-                                                                    <StyledText style={[{...reverseThemeStyle, fontSize: 16, fontWeight: 'bold'}, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{item.productName} ${item.price}</StyledText>
+                                                                    <StyledText style={[{...reverseThemeStyle, fontSize: 16, fontWeight: 'bold'}, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{item.productName} ${item.price} {`X${item.quantity}`}</StyledText>
                                                                     {!!item?.options && <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{item.options}</StyledText>}
                                                                     {!!item?.appliedOfferInfo && <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{` ${item?.appliedOfferInfo?.offerName}(${item?.appliedOfferInfo?.overrideDiscount})`}</StyledText>}
                                                                 </View>
@@ -248,34 +319,72 @@ class SpiltBillScreen extends React.Component {
                                                                         )}
                                                                         {item?.state === 'SETTLED' && <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{t('stateTip.settled.display')}</StyledText>}
                                                                     </View>
-                                                                    <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{`X${item.quantity}`}</StyledText>
+
                                                                     <StyledText style={[reverseThemeStyle, (!!this.state?.choosenItem?.[item.lineItemId] && {backgroundColor: mainThemeColor})]}>{item.lineItemSubTotal}</StyledText>
                                                                 </View>
                                                             </View>
                                                         </TouchableOpacity>
-                                                    </SwipeRow>
-                                                )
-                                            })
-                                            : <StyledText style={{alignSelf: 'center'}}>{t('nothing')}</StyledText>}
-                                    </ScrollView>
-                                </View>
-                                <View style={{flex: 1, marginVertical: 5, justifyContent: 'space-between'}}>
+                                                    )
+                                                })
+                                                : <StyledText style={{alignSelf: 'center'}}>{t('nothing')}</StyledText>}
+                                        </ScrollView>
+                                    </View>
+                                    <View style={{flex: 1, marginVertical: 5, flexDirection: 'row'}}>
+                                        <View style={{flex: 1, justifyContent: 'space-between'}}>
 
 
-                                    <StyledText style={{textAlign: 'left'}}>{t('order.discount')} ${order.discount}</StyledText>
-                                    <StyledText style={{textAlign: 'left'}}>{t('order.serviceCharge')} ${order.serviceCharge}</StyledText>
+                                            <StyledText style={{textAlign: 'left'}}>{t('order.discount')} ${this.state.splitOrderData.discount}</StyledText>
+                                            <StyledText style={{textAlign: 'left'}}>{t('order.serviceCharge')} ${this.state.splitOrderData.serviceCharge}</StyledText>
 
-                                    <StyledText style={{textAlign: 'left'}}>{t('order.total')} ${order.orderTotal}</StyledText>
+                                            <StyledText style={{textAlign: 'left'}}>{t('order.total')} ${this.state.splitOrderData.orderTotal}</StyledText>
 
 
-                                </View>
+                                        </View>
+                                        <View style={{flex: 3, justifyContent: 'space-between', flexDirection: 'row'}}>
+
+                                            <DeleteBtn
+                                                containerStyle={{
+                                                    flex: 1,
+                                                    alignItems: 'center',
+                                                    borderRadius: 4,
+                                                    borderWidth: 1,
+                                                    borderColor: '#f75336',
+                                                    justifyContent: 'center',
+                                                    backgroundColor: '#f75336',
+                                                }}
+                                                textStyle={{
+                                                    textAlign: 'center',
+                                                    fontSize: 16,
+                                                    color: '#fff',
+                                                }}
+                                                handleDeleteAction={() => {
+                                                    this.props.navigation.goBack()
+                                                    !!this.state?.splitOrderData && this.deleteSplitOrder()
+                                                }}
+                                            />
+                                            <View style={{flex: 2, marginLeft: 16}}>
+                                                <MainActionFlexButton
+                                                    title={t('payOrder')}
+                                                    onPress={() => {
+                                                        if (!!this.state?.splitOrderData && this.state?.splitOrderData?.lineItems?.length > 0) {
+                                                            console.log('onPress', order)
+                                                            this.props.navigation.navigate('Payment', {
+                                                                order: this.state.splitOrderData,
+                                                                isSplitting: true,
+                                                                parentOrder: order,
+                                                            })
+                                                        }
+                                                        else {
+                                                            warningMessage(t('lineItemCountCheck'))
+                                                        }
+                                                    }} />
+                                            </View>
+
+
+                                        </View>
+                                    </View>
+                                </View>}
                             </View>
-                            <View style={{
-                                flex: 2,
-                                justifyContent: 'center',
-                                marginTop: 8,
-                                marginBottom: 5,
-                            }}></View>
                         </View>
                     </View>
                 </ThemeContainer>
@@ -287,6 +396,11 @@ class SpiltBillScreen extends React.Component {
                     <View style={[styles.container]}>
                         <ScreenHeader backNavigation={false}
                             title={t('SpiltBillScreenTitle')} />
+                        <NavigationEvents
+                            onWillFocus={() => {
+                                this.props.getOrder()
+                            }}
+                        />
 
 
                     </View>

@@ -43,3 +43,17 @@ export const MainActionButton = (props) => {
     )
 }
 
+export const MainActionFlexButton = (props) => {
+
+    return (
+        <TouchableOpacity
+            onPress={props?.onPress ?? (() => console.warn('no onPress'))}
+            style={styles.flexButton}
+        >
+            <Text style={styles.flexButtonText}>
+                {props?.title ?? 'Submit'}
+            </Text>
+        </TouchableOpacity>
+    )
+}
+

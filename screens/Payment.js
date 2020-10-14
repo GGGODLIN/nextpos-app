@@ -99,6 +99,8 @@ class Payment extends React.Component {
         order={order}
         navigation={navigation}
         onSubmit={this.handlePayment}
+        isSplitting={this.props.navigation.state.params?.isSplitting ?? false}
+        parentOrder={this.props.navigation.state.params?.parentOrder ?? null}
       />
         : <PaymentFormScreen
           initialValues={{
@@ -108,6 +110,8 @@ class Payment extends React.Component {
           order={order}
           navigation={navigation}
           onSubmit={this.handlePayment}
+          isSplitting={this.props.navigation.state.params?.isSplitting ?? false}
+          parentOrder={this.props.navigation.state.params?.parentOrder ?? null}
         />}
     </>
     )

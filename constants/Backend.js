@@ -224,6 +224,9 @@ export const api = {
     moveItem: orderId => {
       return `${apiRoot}/splitOrders/${orderId}`
     },
+    delete: orderId => {
+      return `${apiRoot}/splitOrders/${orderId}/revert`
+    },
   },
   printer: {
     create: `${apiRoot}/printers`,
