@@ -285,8 +285,8 @@ class TablesScreen extends React.Component {
             }
           >
             <NavigationEvents
-              onWillFocus={() => {
-                this.loadInfo()
+              onWillFocus={async () => {
+                await this.loadInfo()
                 this.loadLocalization()
               }}
             />
@@ -425,7 +425,7 @@ class TablesScreen extends React.Component {
                               })
                             }}
                             gotoOrderDetail={(order) => {
-                              console.log("gotoOrderDetail", order);
+                              //console.log("gotoOrderDetail", order);
                               navigation.navigate('OrderFormII', {
                                 orderId: order.orderId,
                                 orderState: order.state

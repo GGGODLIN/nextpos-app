@@ -42,6 +42,7 @@ class OrderFormII extends React.Component {
         choose: 'Choose',
         deliverAllLineItems: 'Confirm to deliver all line items',
         lineItemCountCheck: 'At least one item is needed to submit an order.',
+        splittingCheck: 'There is an existing split bill now,proceed to start a new split bill?',
         submitOrder: 'Submit',
         backToTables: 'Back to Tables',
         deleteOrder: 'Delete',
@@ -81,6 +82,7 @@ class OrderFormII extends React.Component {
         choose: '選擇',
         deliverAllLineItems: '確認所有品項送餐',
         lineItemCountCheck: '請加一個以上的產品到訂單裡.',
+        splittingCheck: '目前仍有拆帳中的訂單，確定開始新的拆帳？',
         submitOrder: '送單',
         backToTables: '回到座位區',
         deleteOrder: '刪除',
@@ -367,6 +369,27 @@ class OrderFormII extends React.Component {
     }).then()
   }
 
+  deleteSplitOrder = async (sourceOrderId, splitOrderId) => {
+    const formData = new FormData()
+    formData.append('sourceOrderId', sourceOrderId)
+    await dispatchFetchRequestWithOption(api.splitOrder.delete(splitOrderId), {
+      method: 'POST',
+      withCredentials: true,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: formData
+    }, {
+      defaultMessage: false
+    }, response => {
+      response?.json().then(data => {
+        this.props.getOrder()
+      })
+    }).then()
+  }
+
+
 
   render() {
     const {
@@ -380,7 +403,8 @@ class OrderFormII extends React.Component {
       productsData
     } = this.props
 
-    const {reverseThemeStyle, t} = this.context
+    const {reverseThemeStyle, t, splitParentOrderId} = this.context
+    console.log('splitParentOrderId', splitParentOrderId)
     const map = new Map(Object.entries(products))
 
     let totalQuantity = 0
@@ -563,10 +587,37 @@ class OrderFormII extends React.Component {
                         </View>
                         <View style={{flex: 1, marginHorizontal: 5}}>
                           <TouchableOpacity
-                            onPress={() =>
-                              this.props.navigation.navigate('SpiltBillScreen', {
-                                order: order
-                              })
+                            onPress={() => {
+                              if (splitParentOrderId === null || splitParentOrderId === order?.orderId) {
+                                this.props.navigation.navigate('SpiltBillScreen', {
+                                  order: order
+                                })
+                              }
+                              else {
+                                Alert.alert(
+                                  `${t('splittingCheck')}`,
+                                  ``,
+                                  [
+                                    {
+                                      text: `${this.context.t('action.yes')}`,
+                                      onPress: async () => {
+                                        await this.deleteSplitOrder(this.context?.splitParentOrderId, this.context?.splitOrderId)
+                                        await this.context?.saveSplitOrderId('delete')
+                                        await this.context?.saveSplitParentOrderId('delete')
+                                        this.props.navigation.navigate('SpiltBillScreen', {
+                                          order: order
+                                        })
+                                      }
+                                    },
+                                    {
+                                      text: `${this.context.t('action.no')}`,
+                                      onPress: () => console.log('Cancelled'),
+                                      style: 'cancel'
+                                    }
+                                  ]
+                                )
+                              }
+                            }
                             }
                             style={styles.flexButtonSecondAction}
                           >

@@ -128,7 +128,9 @@ export default class App extends React.Component {
       complexTheme: complexTheme.light,
       toggleTheme: this.toggleTheme,
       splitOrderId: null,
-      saveSplitOrderId: this.saveSplitOrderId
+      saveSplitOrderId: this.saveSplitOrderId,
+      splitParentOrderId: null,
+      saveSplitParentOrderId: this.saveSplitParentOrderId
     }
 
     TimeZoneService.setClientReference(() => store.getState().client)
@@ -233,7 +235,37 @@ export default class App extends React.Component {
       complexTheme: complexTheme[theme]
     })
   }
+  saveSplitParentOrderId = async (id = null) => {
+    if (!!id) {
+      if (id === 'delete') {
+        console.log('delete id')
+        await AsyncStorage.removeItem('splitParentOrderId')
+        this.setState({
+          splitParentOrderId: null
+        })
+      } else {
+        await AsyncStorage.setItem('splitParentOrderId', id)
+        this.setState({
+          splitParentOrderId: id
+        })
+      }
 
+    } else {
+      try {
+        AsyncStorage.getItem('splitParentOrderId').then(val => {
+          if (!val) {
+            return Promise.resolve()
+          } else {
+            this.setState({
+              splitParentOrderId: val
+            })
+          }
+        })
+      } catch (e) {
+        return Promise.resolve()
+      }
+    }
+  }
   saveSplitOrderId = async (id = null) => {
     if (!!id) {
       if (id === 'delete') {
@@ -295,6 +327,8 @@ export default class App extends React.Component {
               isTablet: this.state.isTablet,
               splitOrderId: this.state?.splitOrderId,
               saveSplitOrderId: this.state.saveSplitOrderId,
+              splitParentOrderId: this.state.splitParentOrderId,
+              saveSplitParentOrderId: this.state.saveSplitParentOrderId
             }}>
               <LocaleContext.Provider value={this.state}>
                 <AppNavigator

@@ -40,9 +40,11 @@ class SpiltBillScreen extends React.Component {
         context.localize({
             en: {
                 SpiltBillScreenTitle: 'Spilt Bill',
+                ConfirmCancelMessage: 'Confirm to cancel split bill ?'
             },
             zh: {
                 SpiltBillScreenTitle: '拆帳',
+                ConfirmCancelMessage: '確定取消拆帳嗎？'
             }
         })
         this.state = {
@@ -55,12 +57,19 @@ class SpiltBillScreen extends React.Component {
 
     componentDidMount() {
         console.log('SpiltBillScreen', this.props.order)
-        if (!!this.state.splitOrderId) {
-            this.getSplitOrder(this.state.splitOrderId)
-        }
+        this.refreshScreen()
         // this.getXML(this.props.navigation.state.params?.transactionResponse?.transactionId)
         // this.getOnePrinter()
         // this.props.getWorkingAreas()
+    }
+    refreshScreen = () => {
+        if (!!this.context?.splitOrderId) {
+            this.getSplitOrder(this.state.splitOrderId)
+        } else {
+            this.setState({splitOrderData: null, splitOrderId: null})
+        }
+        this.context?.saveSplitParentOrderId(this.props.order.orderId)
+        this.props.getOrder()
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -80,6 +89,7 @@ class SpiltBillScreen extends React.Component {
 
     addItem = async (item) => {
         let url = !!this.state.splitOrderId ? api.splitOrder.moveItem(this.state.splitOrderId) : api.splitOrder.new
+        console.log('url', url)
         await dispatchFetchRequestWithOption(url, {
             method: 'POST',
             withCredentials: true,
@@ -148,12 +158,19 @@ class SpiltBillScreen extends React.Component {
             response?.json().then(data => {
                 this.props.getOrder()
                 this.context?.saveSplitOrderId('delete')
+                this.context?.saveSplitParentOrderId('delete')
                 this.setState({splitOrderData: null, splitOrderId: null})
                 console.log('Back data', data)
             })
         }).then()
         // this.context?.saveSplitOrderId('delete')
         // this.setState({splitOrderData: null, splitOrderId: null})
+    }
+
+    cleanSplitContext = () => {
+        this.context?.saveSplitOrderId('delete')
+        this.context?.saveSplitParentOrderId('delete')
+        this.setState({splitOrderData: null, splitOrderId: null})
     }
 
     getSplitOrder = async (id) => {
@@ -196,13 +213,29 @@ class SpiltBillScreen extends React.Component {
                     <View style={[styles.container]}>
                         <ScreenHeader backNavigation={true}
                             backAction={() => {
-                                this.props.navigation.goBack()
-                                !!this.state?.splitOrderData && this.deleteSplitOrder()
+                                Alert.alert(
+                                    `${t('ConfirmCancelMessage')}`,
+                                    ``,
+                                    [
+                                        {
+                                            text: `${t('action.yes')}`,
+                                            onPress: () => {
+                                                this.props.navigation.goBack()
+                                                !!this.state?.splitOrderData ? this.deleteSplitOrder() : this.cleanSplitContext()
+                                            }
+                                        },
+                                        {
+                                            text: `${t('action.no')}`,
+                                            onPress: () => console.log('Cancelled'),
+                                            style: 'cancel'
+                                        }
+                                    ]
+                                )
                             }}
                             title={t('SpiltBillScreenTitle')} />
                         <NavigationEvents
                             onWillFocus={() => {
-                                this.props.getOrder()
+                                this.refreshScreen()
                             }}
                         />
                         <View style={{flexDirection: 'row', flex: 1}}>
@@ -343,19 +376,22 @@ class SpiltBillScreen extends React.Component {
                                         <View style={{flex: 3, justifyContent: 'space-between', flexDirection: 'row'}}>
 
                                             <DeleteBtn
+                                                text={t('action.cancel')}
+                                                alertTitle={t('ConfirmCancelMessage')}
+                                                alertMessage={''}
                                                 containerStyle={{
                                                     flex: 1,
                                                     alignItems: 'center',
                                                     borderRadius: 4,
                                                     borderWidth: 1,
-                                                    borderColor: '#f75336',
+                                                    borderColor: mainThemeColor,
                                                     justifyContent: 'center',
-                                                    backgroundColor: '#f75336',
+                                                    backgroundColor: '#fff',
                                                 }}
                                                 textStyle={{
                                                     textAlign: 'center',
                                                     fontSize: 16,
-                                                    color: '#fff',
+                                                    color: mainThemeColor,
                                                 }}
                                                 handleDeleteAction={() => {
                                                     this.props.navigation.goBack()
@@ -411,7 +447,7 @@ class SpiltBillScreen extends React.Component {
     }
 }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, props) => ({
     labels: state.labels.data.labels,
     subproducts: state.label.data.subLabels,
     products: state.products.data.results,

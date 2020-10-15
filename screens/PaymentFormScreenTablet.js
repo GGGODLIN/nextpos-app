@@ -19,6 +19,7 @@ import {api, dispatchFetchRequestWithOption, successMessage} from '../constants/
 import {isGuiNumberValid} from 'taiwan-id-validator2'
 import {handleDelete} from "../helpers/orderActions";
 import NavigationService from "../navigation/NavigationService";
+import {NavigationEvents} from 'react-navigation'
 
 class PaymentFormScreenTablet extends React.Component {
     static navigationOptions = {
@@ -90,7 +91,7 @@ class PaymentFormScreenTablet extends React.Component {
             modalVisible: false,
             modalData: props.order,
             orderLineItems: {},
-            waiveServiceCharge: true,
+            waiveServiceCharge: this.props.order?.serviceCharge === 0,
         }
     }
 
@@ -100,12 +101,25 @@ class PaymentFormScreenTablet extends React.Component {
         this.setState({waiveServiceCharge: this.props.order?.serviceCharge === 0})
     }
 
+    componentDidUpdate(prevProps, prevState) {
+        if (this.props?.order !== prevProps?.order) {
+            this.setState({openDiscountKeyBoard: false, waiveServiceCharge: this.props.order?.serviceCharge === 0})
+        }
+    }
+
     refreshOrder = async () => {
         this.props.getfetchglobalOrderOffers()
         this.props.getOrder(this.props.order.orderId)
         this.setState({openDiscountKeyBoard: false})
 
     }
+
+    initScreen = async () => {
+        await this.props.getfetchglobalOrderOffers()
+        await this.props.getOrder(this.props.order.orderId)
+        this.setState({openDiscountKeyBoard: false, waiveServiceCharge: this.props.order?.serviceCharge === 0})
+    }
+
 
 
     handleComplete = id => {
@@ -127,12 +141,14 @@ class PaymentFormScreenTablet extends React.Component {
                         order: this.props?.parentOrder
                     })
                 } else {
+                    this.context?.saveSplitParentOrderId('delete')
                     handleDelete(this.props?.parentOrder?.orderId, () => NavigationService.navigate('TablesSrc'))
-                    this.props.navigation.navigate('TablesSrc')
                 }
 
-            } else
+            } else {
+                this.context?.saveSplitParentOrderId('delete')
                 this.props.navigation.navigate('TablesSrc')
+            }
         }).then()
     }
 
@@ -207,6 +223,11 @@ class PaymentFormScreenTablet extends React.Component {
                     <ScreenHeader backNavigation={true}
                         parentFullScreen={true}
                         title={t('payment.paymentTitle')}
+                    />
+                    <NavigationEvents
+                        onWillFocus={async () => {
+                            await this.initScreen()
+                        }}
                     />
                     <PaymentDiscountModal
                         modalVisible={this.state.modalVisible}
