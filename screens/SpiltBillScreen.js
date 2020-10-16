@@ -25,6 +25,9 @@ import ScreenHeader from "../components/ScreenHeader";
 import Icon from 'react-native-vector-icons/FontAwesome'
 import {MainActionButton, MainActionFlexButton} from "../components/ActionButtons";
 import {NavigationEvents} from 'react-navigation'
+import {ThemeScrollView} from "../components/ThemeScrollView";
+import {SwipeListView} from 'react-native-swipe-list-view'
+import {CheckBox, Tooltip} from 'react-native-elements'
 
 
 
@@ -40,11 +43,17 @@ class SpiltBillScreen extends React.Component {
         context.localize({
             en: {
                 SpiltBillScreenTitle: 'Spilt Bill',
-                ConfirmCancelMessage: 'Confirm to cancel split bill ?'
+                ConfirmCancelMessage: 'Confirm to cancel split bill ?',
+                nothing: 'Nothing',
+                parentOrder: 'Original Bill',
+                splitOrder: 'Split Bill'
             },
             zh: {
                 SpiltBillScreenTitle: '拆帳',
-                ConfirmCancelMessage: '確定取消拆帳嗎？'
+                ConfirmCancelMessage: '確定取消拆帳嗎？',
+                nothing: '尚無產品',
+                parentOrder: '原單',
+                splitOrder: '子單'
             }
         })
         this.state = {
@@ -81,7 +90,39 @@ class SpiltBillScreen extends React.Component {
         //     this.handlePrint(this.state?.receiptXML, this.state.printer.ipAddress, false)
         // }
     }
+    renderStateToolTip = (state, t) => {
+        const tooltip = (
+            <View>
+                <Text>
+                    {t('stateTip.open.display')}: {t('stateTip.open.note')}
+                </Text>
+                <Text>
+                    {t('stateTip.inProcess.display')}: {t('stateTip.inProcess.note')}
+                </Text>
+                <Text>
+                    {t('stateTip.delivered.display')}: {t('stateTip.delivered.note')}
+                </Text>
+                <Text>
+                    {t('stateTip.settled.display')}: {t('stateTip.settled.note')}
+                </Text>
+            </View>
+        )
 
+        return (
+            <Tooltip popover={tooltip} height={120} width={200} backgroundColor={mainThemeColor}>
+                <View>
+                    {state === 'OPEN' && <StyledText>{t('stateTip.open.display')}</StyledText>}
+                    {['IN_PROCESS', 'ALREADY_IN_PROCESS'].includes(state) && (
+                        <StyledText>{t('stateTip.inProcess.display')}</StyledText>
+                    )}
+                    {state === 'DELIVERED' && (
+                        <StyledText>{t('stateTip.delivered.display')}</StyledText>
+                    )}
+                    {state === 'SETTLED' && <StyledText>{t('stateTip.settled.display')}</StyledText>}
+                </View>
+            </Tooltip>
+        )
+    }
 
 
 
@@ -121,7 +162,7 @@ class SpiltBillScreen extends React.Component {
             withCredentials: true,
             credentials: 'include',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 sourceOrderId: this.state.splitOrderId,
@@ -149,7 +190,7 @@ class SpiltBillScreen extends React.Component {
             withCredentials: true,
             credentials: 'include',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'multipart/form-data'
             },
             body: formData
         }, {
@@ -202,10 +243,9 @@ class SpiltBillScreen extends React.Component {
             isLoading,
             order,
             themeStyle,
-
             productsData
         } = this.props
-        const {reverseThemeStyle, t} = this.context
+        const {reverseThemeStyle, t, splitParentOrderId, complexTheme, } = this.context
 
         if (this.context.isTablet) {
             return (
@@ -429,14 +469,311 @@ class SpiltBillScreen extends React.Component {
         else {
             return (
                 <ThemeContainer>
-                    <View style={[styles.container]}>
-                        <ScreenHeader backNavigation={false}
-                            title={t('SpiltBillScreenTitle')} />
+                    <View style={[styles.container, {
+                        marginLeft: 0,
+                        marginRight: 0,
+                    }]}>
+                        <View style={{
+                            marginLeft: 15,
+                            marginRight: 15,
+                        }}>
+                            <ScreenHeader backNavigation={true}
+                                title={t('SpiltBillScreenTitle')}
+                                backAction={() => {
+                                    Alert.alert(
+                                        `${t('ConfirmCancelMessage')}`,
+                                        ``,
+                                        [
+                                            {
+                                                text: `${t('action.yes')}`,
+                                                onPress: () => {
+                                                    this.props.navigation.goBack()
+                                                    !!this.state?.splitOrderData ? this.deleteSplitOrder() : this.cleanSplitContext()
+                                                }
+                                            },
+                                            {
+                                                text: `${t('action.no')}`,
+                                                onPress: () => console.log('Cancelled'),
+                                                style: 'cancel'
+                                            }
+                                        ]
+                                    )
+                                }} />
+                        </View>
                         <NavigationEvents
                             onWillFocus={() => {
-                                this.props.getOrder()
+                                this.refreshScreen()
                             }}
                         />
+                        <View style={{flex: 1}}>
+                            <View style={{flex: 9, paddingBottom: 8}}>
+                                <View style={{flex: 2, marginBottom: 5}}>
+                                    <View style={{
+                                        flexDirection: 'row',
+                                        justifyContent: 'flex-start',
+                                        alignItems: 'center',
+                                        flex: 1,
+                                        marginBottom: 16
+                                    }}>
+                                        <Text style={[styles.sectionBarText, {paddingLeft: 10}]}>
+                                            {t('parentOrder')}
+                                        </Text>
+                                        <View style={styles.tableRowContainer}>
+                                            <StyledText>Order ID: </StyledText>
+                                            <StyledText style={styles.tableCellText}>{order.serialId}</StyledText>
+                                            <StyledText> ({order.orderType === 'IN_STORE' ? order.tableDisplayName : t('order.takeOut')})</StyledText>
+                                        </View>
+                                    </View>
+                                    <View style={[styles.sectionBar, {flex: 1}]}>
+                                        <View style={[styles.tableCellView, {flex: 8}]}>
+                                            <TouchableOpacity>
+                                                <Text style={styles.sectionBarTextSmall}>
+                                                    {t('order.product')}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <View style={[styles.tableCellView, {flex: 2}]}>
+                                            <TouchableOpacity>
+                                                <Text style={styles.sectionBarTextSmall}>
+                                                    {t('order.quantity')}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <View style={[styles.tableCellView, {flex: 3}]}>
+                                            <TouchableOpacity>
+                                                <Text style={styles.sectionBarTextSmall}>{t('order.unitPrice')}</Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <View style={[styles.tableCellView, {flex: 3}]}>
+                                            <TouchableOpacity>
+                                                <Text style={styles.sectionBarTextSmall}>{t('order.subtotal')}</Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+
+                                    </View>
+                                </View>
+                                <View style={{flex: 8}}>
+                                    <ScrollView style={{flex: 1}}>
+                                        {order?.lineItems?.length > 0 ?
+                                            order?.lineItems?.map((item, index) => {
+                                                return (
+                                                    <TouchableOpacity style={[styles.rowFront, themeStyle]} onPress={() => {this.addItem(item)}}>
+                                                        <View style={{marginBottom: 0}}>
+                                                            <View style={[styles.tableRowContainer, {paddingBottom: 0}]}>
+                                                                <View style={[styles.tableCellView, {flex: 8}]}>
+
+                                                                    <View style={{flex: 5}}>
+                                                                        <StyledText style={{textAlign: 'left'}}>
+                                                                            {item.productName}
+                                                                        </StyledText>
+                                                                    </View>
+                                                                </View>
+
+                                                                <View style={[styles.tableCellView, {flex: 2, alignItems: 'center', justifyContent: "center"}]}>
+                                                                    <StyledText>{item.quantity}</StyledText>
+                                                                </View>
+
+                                                                <View style={[styles.tableCellView, {flex: 3}]}>
+                                                                    <StyledText>${item.price}</StyledText>
+                                                                </View>
+
+                                                                <View style={[styles.tableCellView, {flex: 3}]}>
+                                                                    <StyledText>${item.lineItemSubTotal}</StyledText>
+                                                                </View>
+
+                                                            </View>
+                                                            <View>
+                                                                <View style={{marginLeft: 15}}>
+                                                                    {renderChildProducts(item)}
+                                                                </View>
+                                                                <View style={{marginLeft: 15}}>
+                                                                    {renderOptionsAndOffer(item)}
+                                                                </View>
+                                                            </View>
+                                                        </View>
+                                                    </TouchableOpacity>
+
+
+
+
+                                                )
+                                            })
+                                            : <StyledText style={{alignSelf: 'center'}}>{t('nothing')}</StyledText>}
+                                    </ScrollView>
+                                </View>
+                                <View style={[complexTheme.shade, {flex: 1, marginTop: 5, paddingVertical: 5, paddingHorizontal: 10, flexDirection: 'row', justifyContent: 'space-between'}]}>
+
+
+                                    <StyledText style={{textAlign: 'left'}}>{t('order.discount')} ${order.discount}</StyledText>
+                                    <StyledText style={{textAlign: 'left'}}>{t('order.serviceCharge')} ${order.serviceCharge}</StyledText>
+
+                                    <StyledText style={{textAlign: 'left'}}>{t('order.total')} ${order.orderTotal}</StyledText>
+
+
+                                </View>
+                            </View>
+                            <View style={{flex: 9, paddingBottom: 8, borderColor: mainThemeColor, borderTopWidth: 1, paddingTop: 16}}>
+                                <View style={{flex: 2, marginBottom: 5}}>
+
+                                    <View style={{
+                                        flexDirection: 'row',
+                                        justifyContent: 'flex-start',
+                                        alignItems: 'center',
+                                        flex: 1,
+                                        marginBottom: 16
+                                    }}>
+                                        <Text style={[styles.sectionBarText, {paddingLeft: 10}]}>
+                                            {t('splitOrder')}
+                                        </Text>
+                                        {!!this.state?.splitOrderData && <View style={styles.tableRowContainer}>
+                                            <StyledText>Order ID: </StyledText>
+                                            <StyledText style={styles.tableCellText}>{this.state?.splitOrderData?.serialId}</StyledText>
+                                            <StyledText> ({this.state?.splitOrderData?.orderType === 'IN_STORE' ? this.state?.splitOrderData?.tableDisplayName : t('order.takeOut')})</StyledText>
+                                        </View>}
+                                    </View>
+
+                                    <View style={[styles.sectionBar, {flex: 1}]}>
+                                        <View style={[styles.tableCellView, {flex: 8}]}>
+                                            <TouchableOpacity>
+                                                <Text style={styles.sectionBarTextSmall}>
+                                                    {t('order.product')}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <View style={[styles.tableCellView, {flex: 2}]}>
+                                            <TouchableOpacity>
+                                                <Text style={styles.sectionBarTextSmall}>
+                                                    {t('order.quantity')}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <View style={[styles.tableCellView, {flex: 3}]}>
+                                            <TouchableOpacity>
+                                                <Text style={styles.sectionBarTextSmall}>{t('order.unitPrice')}</Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <View style={[styles.tableCellView, {flex: 3}]}>
+                                            <TouchableOpacity>
+                                                <Text style={styles.sectionBarTextSmall}>{t('order.subtotal')}</Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+
+                                    </View>
+                                </View>
+                                <View style={{flex: 8}}>
+                                    <ScrollView style={{flex: 1}}>
+                                        {this.state.splitOrderData?.lineItems?.length > 0 ?
+                                            this.state.splitOrderData?.lineItems?.map((item, index) => {
+                                                return (
+                                                    <TouchableOpacity style={[styles.rowFront, themeStyle]} onPress={() => {this.deleteItem(item)}}>
+                                                        <View style={{marginBottom: 0}}>
+                                                            <View style={[styles.tableRowContainer, {paddingBottom: 0}]}>
+                                                                <View style={[styles.tableCellView, {flex: 8}]}>
+
+                                                                    <View style={{flex: 5}}>
+                                                                        <StyledText style={{textAlign: 'left'}}>
+                                                                            {item.productName}
+                                                                        </StyledText>
+                                                                    </View>
+                                                                </View>
+
+                                                                <View style={[styles.tableCellView, {flex: 2, alignItems: 'center', justifyContent: "center"}]}>
+                                                                    <StyledText>{item.quantity}</StyledText>
+                                                                </View>
+
+                                                                <View style={[styles.tableCellView, {flex: 3}]}>
+                                                                    <StyledText>${item.price}</StyledText>
+                                                                </View>
+
+                                                                <View style={[styles.tableCellView, {flex: 3}]}>
+                                                                    <StyledText>${item.lineItemSubTotal}</StyledText>
+                                                                </View>
+
+                                                            </View>
+                                                            <View>
+                                                                <View style={{marginLeft: 15}}>
+                                                                    {renderChildProducts(item)}
+                                                                </View>
+                                                                <View style={{marginLeft: 15}}>
+                                                                    {renderOptionsAndOffer(item)}
+                                                                </View>
+                                                            </View>
+                                                        </View>
+                                                    </TouchableOpacity>
+
+
+
+
+                                                )
+                                            })
+                                            : <StyledText style={{alignSelf: 'center'}}>{t('nothing')}</StyledText>}
+                                    </ScrollView>
+                                </View>
+                                <View style={[complexTheme.shade, {flex: 1, marginTop: 5, paddingVertical: 5, paddingHorizontal: 10, flexDirection: 'row', justifyContent: 'space-between'}]}>
+
+
+                                    <StyledText style={{textAlign: 'left'}}>{t('order.discount')} ${this.state?.splitOrderData?.discount ?? '0'}</StyledText>
+                                    <StyledText style={{textAlign: 'left'}}>{t('order.serviceCharge')} ${this.state?.splitOrderData?.serviceCharge ?? '0'}</StyledText>
+
+                                    <StyledText style={{textAlign: 'left'}}>{t('order.total')} ${this.state?.splitOrderData?.orderTotal ?? '0'}</StyledText>
+
+
+                                </View>
+                            </View>
+                            <View style={{
+                                flex: 1.5, flexDirection: 'row', marginLeft: 15,
+                                marginRight: 15,
+                            }}>
+                                <DeleteBtn
+                                    text={t('action.cancel')}
+                                    alertTitle={t('ConfirmCancelMessage')}
+                                    alertMessage={''}
+                                    containerStyle={{
+                                        flex: 1,
+                                        alignItems: 'center',
+                                        borderRadius: 4,
+                                        borderWidth: 1,
+                                        borderColor: mainThemeColor,
+                                        justifyContent: 'center',
+                                        backgroundColor: '#fff',
+                                    }}
+                                    textStyle={{
+                                        textAlign: 'center',
+                                        fontSize: 16,
+                                        color: mainThemeColor,
+                                    }}
+                                    handleDeleteAction={() => {
+                                        this.props.navigation.goBack()
+                                        !!this.state?.splitOrderData && this.deleteSplitOrder()
+                                    }}
+                                />
+                                <View style={{flex: 1, marginLeft: 16}}>
+                                    <MainActionFlexButton
+                                        title={t('payOrder')}
+                                        onPress={() => {
+                                            if (!!this.state?.splitOrderData && this.state?.splitOrderData?.lineItems?.length > 0) {
+                                                console.log('onPress', order)
+                                                this.props.navigation.navigate('Payment', {
+                                                    order: this.state.splitOrderData,
+                                                    isSplitting: true,
+                                                    parentOrder: order,
+                                                })
+                                            }
+                                            else {
+                                                warningMessage(t('lineItemCountCheck'))
+                                            }
+                                        }} />
+                                </View>
+                            </View>
+                        </View>
 
 
                     </View>

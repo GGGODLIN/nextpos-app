@@ -266,6 +266,7 @@ const zh = {
   bar: 'Bar {{someValue}}',
   printerSuccess: '列印成功',
   printerWarning: '列印失敗',
+  splittingCheck: '目前仍有拆帳中的訂單，確定開始新的拆帳？',
 }
 
 export default zh

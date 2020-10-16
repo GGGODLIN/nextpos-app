@@ -5,6 +5,7 @@ import {api, dispatchFetchRequestWithOption, successMessage} from '../constants/
 import PaymentOrderForm from './PaymentOrderForm'
 import {LocaleContext} from '../locales/LocaleContext'
 import LoadingScreen from "./LoadingScreen";
+import {handleDelete} from "../helpers/orderActions";
 
 class PaymentOrder extends React.Component {
   static navigationOptions = {
@@ -45,6 +46,23 @@ class PaymentOrder extends React.Component {
     this.setState({dynamicTotal: 0})
   }
 
+  // handleComplete = id => {
+  //   const formData = new FormData()
+  //   formData.append('action', 'COMPLETE')
+
+  //   dispatchFetchRequestWithOption(api.order.process(id), {
+  //     method: 'POST',
+  //     withCredentials: true,
+  //     credentials: 'include',
+  //     headers: {},
+  //     body: formData
+  //   }, {
+  //     defaultMessage: false
+  //   }, response => {
+  //     this.props.navigation.navigate('TablesSrc')
+  //   }).then()
+  // }
+
   handleComplete = id => {
     const formData = new FormData()
     formData.append('action', 'COMPLETE')
@@ -58,7 +76,20 @@ class PaymentOrder extends React.Component {
     }, {
       defaultMessage: false
     }, response => {
-      this.props.navigation.navigate('TablesSrc')
+      if (!!this.props.navigation.state.params?.isSplitting) {
+        if (this.props.navigation.state.params?.parentOrder?.lineItems.length !== 0) {
+          this.props.navigation.navigate('SpiltBillScreen', {
+            order: this.props.navigation.state.params?.parentOrder
+          })
+        } else {
+          this.context?.saveSplitParentOrderId('delete')
+          handleDelete(this.props.navigation.state.params?.parentOrder?.orderId, () => NavigationService.navigate('TablesSrc'))
+        }
+
+      } else {
+        this.context?.saveSplitParentOrderId('delete')
+        this.props.navigation.navigate('TablesSrc')
+      }
     }).then()
   }
 
@@ -94,7 +125,9 @@ class PaymentOrder extends React.Component {
       response.json().then(data => {
         this.props.navigation.navigate('CheckoutComplete', {
           transactionResponse: data,
-          onSubmit: this.handleComplete
+          onSubmit: this.handleComplete,
+          isSplitting: this.props.navigation.state.params?.isSplitting ?? false,
+          parentOrder: this.props.navigation.state.params?.parentOrder ?? null,
         })
       })
     }).then()

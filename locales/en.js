@@ -264,6 +264,7 @@ const en = {
   bar: 'Bar {{someValue}}',
   printerSuccess: 'Print Success',
   printerWarning: 'Print Failure',
+  splittingCheck: 'There is an existing split bill now,proceed to start a new split bill?',
 }
 
 export default en

@@ -72,6 +72,7 @@ class CheckoutComplete extends React.Component {
     this.getOnePrinter()
     this.props.getWorkingAreas()
     this.context?.saveSplitOrderId('delete')
+
   }
 
   // If dev , commet this function
@@ -400,17 +401,21 @@ class CheckoutComplete extends React.Component {
                   </Text>
                 </TouchableOpacity>
               </View>
-              <View>
+              {(!this.props.navigation.state.params.isSplitting || this.props.navigation.state.params.parentOrder?.lineItems.length === 0) && <View>
                 <TouchableOpacity
                   onPress={() => {
-                    this.props.navigation.navigate('TablesSrc')
+                    if (!!this.props.navigation.state.params.isSplitting) {
+                      this.context?.saveSplitParentOrderId('delete')
+                      handleDelete(this.props.navigation.state.params.parentOrder?.orderId, () => this.props.navigation.navigate('TablesSrc'))
+                    } else
+                      this.props.navigation.navigate('TablesSrc')
                   }}
                 >
                   <Text style={[styles.bottomActionButton, styles.actionButton]}>
                     {t('backToTables')}
                   </Text>
                 </TouchableOpacity>
-              </View>
+              </View>}
 
               <View>
                 <TouchableOpacity
@@ -420,7 +425,7 @@ class CheckoutComplete extends React.Component {
                     )
                   }
                 >
-                  <Text style={[styles.bottomActionButton, styles.secondActionButton]}>{t('completeOrder')}</Text>
+                  <Text style={[styles.bottomActionButton, styles.secondActionButton]}>{t(`${(!this.props.navigation.state.params.isSplitting || this.props.navigation.state.params.parentOrder?.lineItems.length === 0) ? 'completeOrder' : 'continueSplitBill'}`)}</Text>
                 </TouchableOpacity>
               </View>
             </View>

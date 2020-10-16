@@ -57,6 +57,7 @@ class OrdersSummaryRow extends React.Component {
         selectItemToDeliver: 'Please select a line item to deliver',
         deliverOrder: 'Deliver',
         payOrder: 'Payment',
+        splitBill: 'Split Bill',
         completeOrder: 'Complete'
       },
       zh: {
@@ -91,6 +92,7 @@ class OrdersSummaryRow extends React.Component {
         selectItemToDeliver: '請選擇品項送餐',
         deliverOrder: '送餐完畢',
         payOrder: '付款',
+        splitBill: '拆帳',
         completeOrder: '結束訂單'
       }
     })
@@ -246,6 +248,26 @@ class OrdersSummaryRow extends React.Component {
     }).then()
   }
 
+  deleteSplitOrder = async (sourceOrderId, splitOrderId) => {
+    const formData = new FormData()
+    formData.append('sourceOrderId', sourceOrderId)
+    await dispatchFetchRequestWithOption(api.splitOrder.delete(splitOrderId), {
+      method: 'POST',
+      withCredentials: true,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      body: formData
+    }, {
+      defaultMessage: false
+    }, response => {
+      response?.json().then(data => {
+        this.props.getOrder()
+      })
+    }).then()
+  }
+
   render() {
     const {
       products = [],
@@ -260,7 +282,7 @@ class OrdersSummaryRow extends React.Component {
       themeStyle
     } = this.props
 
-    const {t} = this.context
+    const {t, splitParentOrderId} = this.context
 
     return (
       <View style={styles.fullWidthScreen}>
@@ -484,19 +506,60 @@ class OrdersSummaryRow extends React.Component {
           )}
 
           {order.state === 'DELIVERED' && (
-            <TouchableOpacity
-              onPress={() =>
-                order.lineItems.length === 0
-                  ? warningMessage(t('lineItemCountCheck'))
-                  : this.props.navigation.navigate('Payment', {
-                    order: order
-                  })
-              }
-            >
-              <Text style={[styles.bottomActionButton, styles.secondActionButton]}>{t('payOrder')}</Text>
-            </TouchableOpacity>
+            <View style={{flexDirection: 'row'}}>
+              <View style={{flex: 1, marginRight: 10}}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (splitParentOrderId === null || splitParentOrderId === order?.orderId) {
+                      this.props.navigation.navigate('SpiltBillScreen', {
+                        order: order
+                      })
+                    }
+                    else {
+                      Alert.alert(
+                        `${t('splittingCheck')}`,
+                        ``,
+                        [
+                          {
+                            text: `${this.context.t('action.yes')}`,
+                            onPress: async () => {
+                              await this.deleteSplitOrder(this.context?.splitParentOrderId, this.context?.splitOrderId)
+                              await this.context?.saveSplitOrderId('delete')
+                              await this.context?.saveSplitParentOrderId('delete')
+                              this.props.navigation.navigate('SpiltBillScreen', {
+                                order: order
+                              })
+                            }
+                          },
+                          {
+                            text: `${this.context.t('action.no')}`,
+                            onPress: () => console.log('Cancelled'),
+                            style: 'cancel'
+                          }
+                        ]
+                      )
+                    }
+                  }
+                  }
+                >
+                  <Text style={[styles.bottomActionButton, styles.secondActionButton]}>{t('splitBill')}</Text>
+                </TouchableOpacity></View>
+              <View style={{flex: 1}}>
+                <TouchableOpacity
+                  onPress={() =>
+                    order.lineItems.length === 0
+                      ? warningMessage(t('lineItemCountCheck'))
+                      : this.props.navigation.navigate('Payment', {
+                        order: order
+                      })
+                  }
+                >
+                  <Text style={[styles.bottomActionButton, styles.secondActionButton]}>{t('payOrder')}</Text>
+                </TouchableOpacity></View>
+            </View>
 
           )}
+
 
           {order.state === 'SETTLED' && (
             <TouchableOpacity
