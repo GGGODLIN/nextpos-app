@@ -673,7 +673,7 @@ class OrderFormII extends React.Component {
                   </View>
                 </View>
                 <View style={styles.orderItemRightList}>
-                  <View style={{flex: 7}}>
+                  <View style={{flex: 5}}>
                     <ScrollView style={{flex: 1}}>
                       {order?.lineItems?.length > 0 ?
                         order?.lineItems?.map((item, index) => {
@@ -757,7 +757,7 @@ class OrderFormII extends React.Component {
                   </View>
                   <View style={{flex: 1, marginVertical: 5, justifyContent: 'space-between'}}>
 
-
+                    <StyledText style={{textAlign: 'right'}}>{t('order.subtotal')} ${order.total.amountWithTax}</StyledText>
                     <StyledText style={{textAlign: 'right'}}>{t('order.discount')} ${order.discount}</StyledText>
                     <StyledText style={{textAlign: 'right'}}>{t('order.serviceCharge')} ${order.serviceCharge}</StyledText>
 
