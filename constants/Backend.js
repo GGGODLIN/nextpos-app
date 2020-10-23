@@ -224,6 +224,12 @@ export const api = {
     quickCheckout: id => {
       return `${apiRoot}/orders/${id}/quickCheckout`
     },
+    printWorkingOrder: id => {
+      return `${apiRoot}/orders/${id}/orderToWorkingArea`
+    },
+    printOrderDetails: id => {
+      return `${apiRoot}/orders/${id}/orderDetails`
+    },
   },
   splitOrder: {
     new: `${apiRoot}/splitOrders`,

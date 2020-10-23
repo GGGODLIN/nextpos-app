@@ -24,6 +24,7 @@ import {SwipeRow} from 'react-native-swipe-list-view'
 import ScreenHeader from "../components/ScreenHeader";
 import Icon from 'react-native-vector-icons/FontAwesome'
 import {SecondActionButton} from "../components/ActionButtons";
+import {printMessage} from "../helpers/printerActions";
 
 class OrderFormII extends React.Component {
   static navigationOptions = {
@@ -372,6 +373,24 @@ class OrderFormII extends React.Component {
     }).then()
   }
 
+  handlePrintWorkingOrder = (orderId) => {
+    dispatchFetchRequestWithOption(
+      api.order.printWorkingOrder(orderId),
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+      }, {
+      defaultMessage: false
+    }, response => {
+      console.log('handlePrintWorkingOrder', response.body, response.status)
+      response.json().then(data => {
+        console.log('handlePrintWorkingOrder', data)
+      }).catch((e) => console.log(e))
+    }).then()
+  }
+
 
 
 
@@ -577,6 +596,22 @@ class OrderFormII extends React.Component {
                               order.lineItems.length === 0
                                 ? warningMessage(t('lineItemCountCheck'))
                                 : handleOrderSubmit(order.orderId)
+                            }
+                            style={styles.flexButton}
+                          >
+                            <Text style={styles.flexButtonText}>
+                              {t('submitOrder')}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      {['IN_PROCESS'].includes(order.state) && (
+                        <View style={{flex: 2, marginHorizontal: 5}}>
+                          <TouchableOpacity
+                            onPress={() =>
+                              order.lineItems.length === 0
+                                ? warningMessage(t('lineItemCountCheck'))
+                                : this.handlePrintWorkingOrder(order.orderId)
                             }
                             style={styles.flexButton}
                           >
