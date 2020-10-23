@@ -466,16 +466,20 @@ class OrderFormII extends React.Component {
                     <ScrollView style={{flex: 1}}>
 
                       {(this.state?.selectedLabel === 'pinned' && map.get('pinned') !== undefined && map.get('pinned')?.length > 0) ?
-                        <View style={{flexDirection: 'row', flexWrap: 'wrap'}}>{map.get('pinned').map(prd => (
+                        <View style={{flexDirection: 'row', flexWrap: 'wrap'}}>{map.get('pinned').map(prd => {
+                          console.log('prd', prd)
+                          return (
 
-                          <TouchableOpacity style={[{width: '22%', backgroundColor: 'green', marginLeft: '3%', marginBottom: '3%', borderRadius: 10}, reverseThemeStyle]}
-                            onPress={() => this.addItemToOrder(prd.id)}>
-                            <View style={{aspectRatio: 1, alignItems: 'center', justifyContent: 'space-around'}}>
-                              <StyledText style={reverseThemeStyle}>{prd.name}</StyledText>
-                              <StyledText style={reverseThemeStyle}>${prd.price}</StyledText>
-                            </View>
-                          </TouchableOpacity>
-                        ))}</View> : this.state?.selectedLabel === 'pinned' ? <StyledText style={{alignSelf: 'center'}}>{t('nothing')}</StyledText> : null}
+                            <TouchableOpacity style={[{width: '22%', backgroundColor: 'green', marginLeft: '3%', marginBottom: '3%', borderRadius: 10}, reverseThemeStyle]}
+                              onPress={() => this.addItemToOrder(prd.id)}>
+                              <View style={{aspectRatio: 1, alignItems: 'center', justifyContent: 'space-around'}}>
+                                <StyledText style={[reverseThemeStyle, {fontWeight: 'bold'}]}>{prd.name}</StyledText>
+                                <StyledText style={reverseThemeStyle}>{prd.description}</StyledText>
+                                <StyledText style={reverseThemeStyle}>${prd.price}</StyledText>
+                              </View>
+                            </TouchableOpacity>
+                          )
+                        })}</View> : this.state?.selectedLabel === 'pinned' ? <StyledText style={{alignSelf: 'center'}}>{t('nothing')}</StyledText> : null}
 
                       {(this.state?.selectedLabel === 'ungrouped' && map.get('ungrouped') !== undefined && map.get('ungrouped')?.length > 0) ?
                         <View style={{flexDirection: 'row', flexWrap: 'wrap'}}>{map.get('ungrouped').map(prd => (
@@ -483,7 +487,8 @@ class OrderFormII extends React.Component {
                           <TouchableOpacity style={[{width: '22%', backgroundColor: 'green', marginLeft: '3%', marginBottom: '3%', borderRadius: 10}, reverseThemeStyle]}
                             onPress={() => this.addItemToOrder(prd.id)}>
                             <View style={{aspectRatio: 1, alignItems: 'center', justifyContent: 'space-around'}}>
-                              <StyledText style={reverseThemeStyle}>{prd.name}</StyledText>
+                              <StyledText style={[reverseThemeStyle, {fontWeight: 'bold'}]}>{prd.name}</StyledText>
+                              <StyledText style={reverseThemeStyle}>{prd.description}</StyledText>
                               <StyledText style={reverseThemeStyle}>${prd.price}</StyledText>
                             </View>
                           </TouchableOpacity>
@@ -498,7 +503,8 @@ class OrderFormII extends React.Component {
 
                                   <TouchableOpacity style={[{width: '22%', backgroundColor: 'green', marginLeft: '3%', marginBottom: '3%', borderRadius: 10}, reverseThemeStyle]} onPress={() => this.addItemToOrder(prd.id)}>
                                     <View style={{aspectRatio: 1, alignItems: 'center', justifyContent: 'space-around'}}>
-                                      <StyledText style={reverseThemeStyle}>{prd.name}</StyledText>
+                                      <StyledText style={[reverseThemeStyle, {fontWeight: 'bold'}]}>{prd.name}</StyledText>
+                                      <StyledText style={reverseThemeStyle}>{prd.description}</StyledText>
                                       <StyledText style={reverseThemeStyle}>${prd.price}</StyledText>
                                     </View>
                                   </TouchableOpacity>
