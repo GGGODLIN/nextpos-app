@@ -387,8 +387,11 @@ export const api = {
     add: (ubn, id) => {
       return `${apiRoot}/invoiceNumbers/${ubn}/ranges/${id}`
     },
-    delete: (ubn, id, rangeFrom) => {
-      return `${apiRoot}/invoiceNumbers/${ubn}/ranges/${id}/numberRanges/${rangeFrom}`
+    delete: (ubn, id, rangeFrom = null) => {
+      if (!!rangeFrom)
+        return `${apiRoot}/invoiceNumbers/${ubn}/ranges/${id}/numberRanges/${rangeFrom}`
+      else
+        return `${apiRoot}/invoiceNumbers/${ubn}/ranges/${id}`
     },
     checkEligibility: `${apiRoot}/einvoices/checkEligibility`,
     generateAESKey: `${apiRoot}/clients/me/aeskey`,
