@@ -343,6 +343,7 @@ class OrderFormII extends React.Component {
         'Content-Type': 'application/json',
       }
     }, response => {
+      console.log('handleDeleteLineItem', response.body, response.url, response.status, response.ok, response.headers)
       this.props.navigation.navigate('OrderFormII')
       this.props.getOrder(this.props.order.orderId)
     }).then()
@@ -375,17 +376,19 @@ class OrderFormII extends React.Component {
 
   handlePrintWorkingOrder = (orderId) => {
     dispatchFetchRequestWithOption(
-      api.order.printWorkingOrder(orderId),
+      api.order.printOrderDetails(orderId),
       {
         method: 'GET',
+        withCredentials: true,
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         },
       }, {
       defaultMessage: false
     }, response => {
-      console.log('handlePrintWorkingOrder', response.body, response.status)
-      response.json().then(data => {
+      console.log('handlePrintWorkingOrder', response.body, response.url, response.status, response.ok, response.headers)
+      response.text().then(data => {
         console.log('handlePrintWorkingOrder', data)
       }).catch((e) => console.log(e))
     }).then()
