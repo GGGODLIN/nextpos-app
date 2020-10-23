@@ -809,6 +809,7 @@ class OrderFormII extends React.Component {
                               <View style={[styles.tableRowContainer]}>
                                 <View style={[styles.tableCellView, styles.flex(1)]}>
                                   <StyledText>{prd.name}</StyledText>
+                                  {!!prd?.description && <StyledText>  ({prd?.description})</StyledText>}
                                 </View>
                                 <View style={[styles.tableCellView, styles.flex(1), styles.justifyRight]}>
                                   <StyledText>${prd.price}</StyledText>
@@ -836,6 +837,7 @@ class OrderFormII extends React.Component {
                               <View style={[styles.tableRowContainer]}>
                                 <View style={[styles.tableCellView, styles.flex(1)]}>
                                   <StyledText>{prd.name}</StyledText>
+                                  {!!prd?.description && <StyledText>  ({prd?.description})</StyledText>}
                                 </View>
                                 <View style={[styles.tableCellView, styles.flex(1), styles.justifyRight]}>
                                   <StyledText>${prd.price}</StyledText>
@@ -863,6 +865,7 @@ class OrderFormII extends React.Component {
                               <View style={[styles.tableRowContainer]}>
                                 <View style={[styles.tableCellView, styles.flex(1)]}>
                                   <StyledText>{prd.name}</StyledText>
+                                  {!!prd?.description && <StyledText>  ({prd?.description})</StyledText>}
                                 </View>
                                 <View style={[styles.tableCellView, styles.flex(1), styles.justifyRight]}>
                                   <StyledText>${prd.price}</StyledText>
