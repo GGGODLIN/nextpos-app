@@ -174,12 +174,12 @@ class OptionFormScreen extends React.Component {
           {initialValues !== undefined && initialValues?.usedByProducts != null && initialValues?.usedByProducts?.length > 0 && (
             <View style={styles.tableRowContainerWithBorder}>
               <View style={[styles.tableCellView]}>
-                <StyledText style={styles.fieldTitle}>{t('usedByProducts')} :</StyledText>
+                <StyledText style={styles.fieldTitle}>{t('usedByProducts')}</StyledText>
               </View>
               <View style={[styles.tableCellView, {flex: 2, justifyContent: 'flex-end', flexWrap: 'wrap'}]}>
                 {initialValues?.usedByProducts?.map((item, index, array) => {
                   return (
-                    <StyledText style={styles.fieldTitle}>{item?.name}{(index < array?.length - 1) && ','}</StyledText>
+                    <StyledText style={styles.fieldTitle}>{item?.name}{(index < array?.length - 1) && ' , '}</StyledText>
                   )
                 })}
               </View>
@@ -188,12 +188,12 @@ class OptionFormScreen extends React.Component {
           {initialValues !== undefined && initialValues?.usedByProductLabels != null && initialValues?.usedByProductLabels?.length > 0 && (
             <View style={styles.tableRowContainerWithBorder}>
               <View style={[styles.tableCellView]}>
-                <StyledText style={styles.fieldTitle}>{t('usedByProductLabels')} :</StyledText>
+                <StyledText style={styles.fieldTitle}>{t('usedByProductLabels')}</StyledText>
               </View>
               <View style={[styles.tableCellView, {flex: 2, justifyContent: 'flex-end', flexWrap: 'wrap'}]}>
                 {initialValues?.usedByProductLabels?.map((item, index, array) => {
                   return (
-                    <StyledText style={styles.fieldTitle}>{item?.name}{(index < array?.length - 1) && ','}</StyledText>
+                    <StyledText style={styles.fieldTitle}>{item?.name}{(index < array?.length - 1) && ' , '}</StyledText>
                   )
                 })}
               </View>

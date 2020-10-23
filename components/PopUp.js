@@ -205,7 +205,7 @@ class CustomPopUpBase extends Component {
                     {toRoute?.map((item, index, array) => {
                       return (
                         <View
-                          style={{width: `${(array?.length % 2 === 1) && (index === (array?.length - 1)) ? '100%' : '50%'}`, paddingHorizontal: 5}}
+                          style={{width: '100%', paddingHorizontal: 5}}
                         >
                           <TouchableOpacity
                             onPress={() => {
