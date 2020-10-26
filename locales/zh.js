@@ -298,6 +298,8 @@ const zh = {
     splitOrder: '子單'
   },
   productOption: '產品註記',
+  printWorkingOrder: '列印工作單',
+  printOrderDetails: '列印明細',
 }
 
 export default zh

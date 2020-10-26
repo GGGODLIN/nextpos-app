@@ -19,7 +19,7 @@ import OrderItemDetailEditModal from './OrderItemDetailEditModal';
 import OrderTopInfo from "./OrderTopInfo";
 import DeleteBtn from '../components/DeleteBtn'
 import NavigationService from "../navigation/NavigationService";
-import {handleDelete, handleOrderSubmit, handleQuickCheckout, revertSplitOrder} from "../helpers/orderActions";
+import {handleDelete, handleOrderSubmit, handleQuickCheckout, revertSplitOrder, handlePrintWorkingOrder, handlePrintOrderDetails} from "../helpers/orderActions";
 import {SwipeRow} from 'react-native-swipe-list-view'
 import ScreenHeader from "../components/ScreenHeader";
 import Icon from 'react-native-vector-icons/FontAwesome'
@@ -343,7 +343,6 @@ class OrderFormII extends React.Component {
         'Content-Type': 'application/json',
       }
     }, response => {
-      console.log('handleDeleteLineItem', response.body, response.url, response.status, response.ok, response.headers)
       this.props.navigation.navigate('OrderFormII')
       this.props.getOrder(this.props.order.orderId)
     }).then()
@@ -373,27 +372,6 @@ class OrderFormII extends React.Component {
       })
     }).then()
   }
-
-  handlePrintWorkingOrder = (orderId) => {
-    dispatchFetchRequestWithOption(
-      api.order.printOrderDetails(orderId),
-      {
-        method: 'GET',
-        withCredentials: true,
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-      }, {
-      defaultMessage: false
-    }, response => {
-      console.log('handlePrintWorkingOrder', response.body, response.url, response.status, response.ok, response.headers)
-      response.text().then(data => {
-        console.log('handlePrintWorkingOrder', data)
-      }).catch((e) => console.log(e))
-    }).then()
-  }
-
 
 
 
@@ -608,18 +586,34 @@ class OrderFormII extends React.Component {
                           </TouchableOpacity>
                         </View>
                       )}
-                      {['IN_PROCESS'].includes(order.state) && (
+                      {!['OPEN'].includes(order.state) && (
                         <View style={{flex: 2, marginHorizontal: 5}}>
                           <TouchableOpacity
                             onPress={() =>
                               order.lineItems.length === 0
                                 ? warningMessage(t('lineItemCountCheck'))
-                                : this.handlePrintWorkingOrder(order.orderId)
+                                : handlePrintWorkingOrder(order.orderId)
                             }
                             style={styles.flexButton}
                           >
                             <Text style={styles.flexButtonText}>
-                              {t('submitOrder')}
+                              {t('printWorkingOrder')}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      {!['OPEN'].includes(order.state) && (
+                        <View style={{flex: 2, marginHorizontal: 5}}>
+                          <TouchableOpacity
+                            onPress={() =>
+                              order.lineItems.length === 0
+                                ? warningMessage(t('lineItemCountCheck'))
+                                : handlePrintOrderDetails(order.orderId)
+                            }
+                            style={styles.flexButton}
+                          >
+                            <Text style={styles.flexButtonText}>
+                              {t('printOrderDetails')}
                             </Text>
                           </TouchableOpacity>
                         </View>

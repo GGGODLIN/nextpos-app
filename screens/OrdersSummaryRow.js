@@ -12,7 +12,7 @@ import {LocaleContext} from '../locales/LocaleContext'
 import {CheckBox, Tooltip} from 'react-native-elements'
 import ScreenHeader from "../components/ScreenHeader";
 import OrderTopInfo from "./OrderTopInfo";
-import {handleDelete, handleOrderSubmit, renderChildProducts, renderOptionsAndOffer, handleQuickCheckout, revertSplitOrder} from "../helpers/orderActions";
+import {handleDelete, handleOrderSubmit, renderChildProducts, renderOptionsAndOffer, handleQuickCheckout, revertSplitOrder, handlePrintWorkingOrder, handlePrintOrderDetails} from "../helpers/orderActions";
 import NavigationService from "../navigation/NavigationService";
 import {withContext} from "../helpers/contextHelper";
 import {compose} from "redux";
@@ -525,6 +525,31 @@ class OrdersSummaryRow extends React.Component {
               }}
             >
               <Text style={[styles.bottomActionButton, styles.secondActionButton]}>{t('deliverOrder')}</Text>
+            </TouchableOpacity>
+
+          )}
+
+          {!['OPEN'].includes(order.state) && (
+            <TouchableOpacity
+              onPress={() =>
+                order.lineItems.length === 0
+                  ? warningMessage(t('lineItemCountCheck'))
+                  : handlePrintWorkingOrder(order.orderId)
+              }
+            >
+              <Text style={[styles.bottomActionButton, styles.secondActionButton]}>{t('printWorkingOrder')}</Text>
+            </TouchableOpacity>
+
+          )}
+          {!['OPEN'].includes(order.state) && (
+            <TouchableOpacity
+              onPress={() =>
+                order.lineItems.length === 0
+                  ? warningMessage(t('lineItemCountCheck'))
+                  : handlePrintOrderDetails(order.orderId)
+              }
+            >
+              <Text style={[styles.bottomActionButton, styles.secondActionButton]}>{t('printOrderDetails')}</Text>
             </TouchableOpacity>
 
           )}
