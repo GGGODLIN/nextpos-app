@@ -6,6 +6,8 @@ import DropDown from '../components/DropDown'
 import {LocaleContext} from '../locales/LocaleContext'
 import styles from '../styles'
 import {StyledText} from "../components/StyledText";
+import SegmentedControl from "../components/SegmentedControl";
+import InputText from '../components/InputText'
 
 class OrderFilterForm extends React.Component {
   static contextType = LocaleContext
@@ -13,6 +15,8 @@ class OrderFilterForm extends React.Component {
     readonly: true,
     showFromDate: false,
     showToDate: false,
+    searchType: [this.context.t('orderFilterForm.searchByDateAndTable'), this.context.t('orderFilterForm.searchByInvoice')],
+    searchTypeIndex: 0,
   }
 
   // todo: shared between OrdersScreen and SalesChart that caused transitioning from SalesChart to OrdersScreen an form rendering issue.
@@ -45,39 +49,85 @@ class OrderFilterForm extends React.Component {
 
   showFromDatepicker = () => {
     this.setState({
-  		showFromDate: !this.state.showFromDate
-  	})
+      showFromDate: !this.state.showFromDate
+    })
   };
 
   showToDatepicker = () => {
     this.setState({
-  		showToDate: !this.state.showToDate
-  	})
+      showToDate: !this.state.showToDate
+    })
   };
 
   render() {
-    const { handleSubmit, handlegetDate } = this.props
-    const { t } = this.context
+    const {handleSubmit, handlegetDate} = this.props
+    const {t} = this.context
 
     return (
       <View>
         <View style={[styles.tableRowContainer]}>
-          <View style={[styles.tableCellView, { flex: 3, marginRight: 5}]}>
+          <View style={[{flex: 1}]}>
+            <Field
+              name="searchType"
+              component={SegmentedControl}
+              selectedIndex={this.state?.searchTypeIndex}
+              onChange={(val) => this.setState({searchTypeIndex: val})}
+              values={this.state?.searchType}
+            />
+          </View>
+        </View>
+
+        <View style={[styles.tableRowContainer]}>
+          <View style={[styles.tableCellView, {flex: 2, marginRight: 5}]}>
             <Field
               name="dateRange"
               component={DropDown}
               options={[
-              	{ label: t('dateRange.RANGE'), value: 'RANGE' },
-                { label: t('dateRange.SHIFT'), value: 'SHIFT' },
-                { label: t('dateRange.TODAY'), value: 'TODAY' },
-                { label: t('dateRange.WEEK'), value: 'WEEK' },
-                { label: t('dateRange.MONTH'), value: 'MONTH' }
+                {label: t('dateRange.RANGE'), value: 'RANGE'},
+                {label: t('dateRange.SHIFT'), value: 'SHIFT'},
+                {label: t('dateRange.TODAY'), value: 'TODAY'},
+                {label: t('dateRange.WEEK'), value: 'WEEK'},
+                {label: t('dateRange.MONTH'), value: 'MONTH'}
               ]}
               onChange={(value) => {
                 this.setState({
                   readonly: value !== 'RANGE'
                 })
               }}
+            />
+          </View>
+          <View style={[styles.tableCellView, {flex: 3}]}>
+            <Field
+              name="fromDate"
+              component={RenderDatePicker}
+              onChange={this.handlegetDate}
+              placeholder={t('order.fromDate')}
+              isShow={this.state.showFromDate}
+              showDatepicker={this.showFromDatepicker}
+              readonly={this.state.readonly}
+            />
+          </View>
+          <View style={[styles.tableCellView, {flex: 0.2, justifyContent: 'center'}]}>
+            <StyledText>-</StyledText>
+          </View>
+          <View style={[styles.tableCellView, {flex: 3}]}>
+            <Field
+              name="toDate"
+              component={RenderDatePicker}
+              onChange={this.handlegetDate}
+              placeholder={t('order.toDate')}
+              isShow={this.state.showToDate}
+              showDatepicker={this.showToDatepicker}
+              readonly={this.state.readonly}
+            />
+          </View>
+        </View>
+
+        <View style={[styles.tableRowContainer, {paddingTop: 0}]}>
+          <View style={[styles.tableCellView, {flex: 3, marginRight: 5}]}>
+            <Field
+              name="tableName"
+              component={InputText}
             />
           </View>
           <View style={[styles.tableCellView, styles.justifyRight]}>
@@ -92,34 +142,6 @@ class OrderFilterForm extends React.Component {
                 {t('action.search')}
               </Text>
             </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={[styles.tableRowContainer, {paddingTop: 0}]}>
-          <View style={[styles.tableCellView, {flex: 2}]}>
-            <Field
-              name="fromDate"
-              component={RenderDatePicker}
-              onChange={this.handlegetDate}
-              placeholder={t('order.fromDate')}
-              isShow={this.state.showFromDate}
-              showDatepicker={this.showFromDatepicker}
-              readonly={this.state.readonly}
-            />
-          </View>
-          <View style={[styles.tableCellView, {flex: 0.2, justifyContent: 'center'}]}>
-            <StyledText>-</StyledText>
-          </View>
-          <View style={[styles.tableCellView, {flex: 2}]}>
-            <Field
-              name="toDate"
-              component={RenderDatePicker}
-              onChange={this.handlegetDate}
-              placeholder={t('order.toDate')}
-              isShow={this.state.showToDate}
-              showDatepicker={this.showToDatepicker}
-              readonly={this.state.readonly}
-            />
           </View>
         </View>
       </View>

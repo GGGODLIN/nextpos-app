@@ -301,6 +301,10 @@ const zh = {
   printWorkingOrder: '列印工作單',
   printOrderDetails: '列印明細',
   quickCheckoutPrint: '是否列印工作單?',
+  orderFilterForm: {
+    searchByDateAndTable: '以日期和桌位搜尋',
+    searchByInvoice: '以發票號碼搜尋'
+  }
 }
 
 export default zh

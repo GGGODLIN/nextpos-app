@@ -178,7 +178,7 @@ export const api = {
     inflightOrders: `${apiRoot}/orders/inflight`,
     getGlobalOrderOffers: `${apiRoot}/offers/globalOrderOffers`,
     getGlobalProductOffers: `${apiRoot}/offers/globalProductOffers`,
-    getOrdersByDateAndRange: (dateRange, shiftId, fromDate, toDate) => {
+    getOrdersByDateAndRange: (dateRange, shiftId, fromDate, toDate, tableName) => {
       let params = ''
 
       if (dateRange != null) {
@@ -191,6 +191,10 @@ export const api = {
 
       if (fromDate != null && toDate != null) {
         params += `&fromDate=${fromDate}&toDate=${toDate}`
+      }
+
+      if (tableName != null) {
+        params += `&table=${tableName}`
       }
 
       return `${apiRoot}/orders?${params}`

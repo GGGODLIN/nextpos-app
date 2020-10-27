@@ -299,6 +299,10 @@ const en = {
   printWorkingOrder: 'Print work order',
   printOrderDetails: 'Print order details',
   quickCheckoutPrint: 'Print work order?',
+  orderFilterForm: {
+    searchByDateAndTable: 'Search by date and table name',
+    searchByInvoice: 'Search by invoice number'
+  }
 }
 
 export default en
