@@ -296,8 +296,9 @@ const en = {
     splitOrder: 'Split Bill'
   },
   productOption: 'Product Option',
-  printWorkingOrder: 'Print working order',
+  printWorkingOrder: 'Print work order',
   printOrderDetails: 'Print order details',
+  quickCheckoutPrint: 'Print work order?',
 }
 
 export default en

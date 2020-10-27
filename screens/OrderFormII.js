@@ -1,5 +1,5 @@
 import React from 'react'
-import {reduxForm} from 'redux-form'
+import {reduxForm, Field} from 'redux-form'
 import {Alert, ScrollView, Text, TouchableOpacity, View, Switch} from 'react-native'
 import {connect} from 'react-redux'
 import {Accordion, List} from '@ant-design/react-native'
@@ -25,6 +25,7 @@ import ScreenHeader from "../components/ScreenHeader";
 import Icon from 'react-native-vector-icons/FontAwesome'
 import {SecondActionButton} from "../components/ActionButtons";
 import {printMessage} from "../helpers/printerActions";
+import DropDown from "../components/DropDown";
 
 class OrderFormII extends React.Component {
   static navigationOptions = {
@@ -45,7 +46,6 @@ class OrderFormII extends React.Component {
         deliverAllLineItems: 'Confirm to deliver all line items',
         lineItemCountCheck: 'At least one item is needed to submit an order.',
         submitOrder: 'Submit',
-        quickCheckoutPrint: 'Print',
         not: 'No',
         quickCheckout: 'Quick checkout',
         backToTables: 'Back to Tables',
@@ -86,7 +86,6 @@ class OrderFormII extends React.Component {
         deliverAllLineItems: '確認所有品項送餐',
         lineItemCountCheck: '請加一個以上的產品到訂單裡.',
         submitOrder: '送單',
-        quickCheckoutPrint: '出單',
         not: '不',
         quickCheckout: '快速結帳',
         backToTables: '回到座位區',
@@ -133,6 +132,11 @@ class OrderFormII extends React.Component {
       modalData: {},
       orderLineItems: {},
       quickCheckoutPrint: true,
+      otherActionOptions: [
+        {label: context.t('printWorkingOrder'), value: 'printWorkingOrder'},
+        {label: context.t('printOrderDetails'), value: 'printOrderDetails'},
+      ],
+      otherAction: null,
     }
     this.onChange = activeSections => {
       this.setState({activeSections: activeSections})
@@ -518,60 +522,59 @@ class OrderFormII extends React.Component {
                     </ScrollView>
                   </View>
                   <View style={{flexDirection: 'row', flex: 1, padding: '3%'}}>
-
-                    <View style={{flexDirection: 'row', flex: 1}}>
-                      {!['SETTLED', 'REFUNDED'].includes(order.state) && (
+                    {order.state === 'OPEN' && <>
+                      <View style={{flex: 1, marginHorizontal: 0, flexDirection: 'row'}}>
+                        <DeleteBtn
+                          containerStyle={{
+                            flex: 1,
+                            alignItems: 'center',
+                            borderRadius: 4,
+                            borderWidth: 1,
+                            borderColor: '#f75336',
+                            justifyContent: 'center',
+                            backgroundColor: '#f75336',
+                          }}
+                          textStyle={{
+                            textAlign: 'center',
+                            fontSize: 16,
+                            color: '#fff',
+                          }}
+                          handleDeleteAction={() => handleDelete(order.orderId, () => NavigationService.navigate('TablesSrc'))}
+                        />
                         <View style={{flex: 1, marginHorizontal: 5}}>
-                          <DeleteBtn
-                            containerStyle={{
-                              flex: 1,
-                              alignItems: 'center',
-                              borderRadius: 4,
-                              borderWidth: 1,
-                              borderColor: '#f75336',
-                              justifyContent: 'center',
-                              backgroundColor: '#f75336',
-                            }}
-                            textStyle={{
-                              textAlign: 'center',
-                              fontSize: 16,
-                              color: '#fff',
-                            }}
-                            handleDeleteAction={() => handleDelete(order.orderId, () => NavigationService.navigate('TablesSrc'))}
-                          />
-                        </View>
-                      )}
-                      {['OPEN', 'IN_PROCESS'].includes(order.state) && (
-                        <View style={{flex: 2, marginHorizontal: 5}}>
                           <TouchableOpacity
                             onPress={() =>
                               order.lineItems.length === 0
                                 ? warningMessage(t('lineItemCountCheck'))
-                                : handleQuickCheckout(order, this.state.quickCheckoutPrint)
+                                : Alert.alert(
+                                  `${t('quickCheckoutPrint')}`,
+                                  ``,
+                                  [
+                                    {
+                                      text: `${this.context.t('action.yes')}`,
+                                      onPress: async () => {
+                                        await handleQuickCheckout(order, true)
+                                      }
+                                    },
+                                    {
+                                      text: `${this.context.t('action.no')}`,
+                                      onPress: async () => await handleQuickCheckout(order, false),
+                                      style: 'cancel'
+                                    }
+                                  ]
+                                )
                             }
-                            style={styles.flexButton}
+                            style={styles.flexButtonSecondAction}
                           >
-                            <View style={{position: 'absolute', top: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center'}}>
-                              <Text style={[styles.flexButtonText, {fontSize: 14}]}>
-                                {!this.state.quickCheckoutPrint && t('not')}{t('quickCheckoutPrint')}
-                              </Text>
-                              <Switch
-                                style={{transform: [{scaleX: .7}, {scaleY: .7}]}}
-                                trackColor={{false: "#767577", true: "#1da1f2"}}
-                                thumbColor={this.state.quickCheckoutPrint ? "#f4f3f4" : "#f4f3f4"}
-                                ios_backgroundColor="#3e3e3e"
-                                onValueChange={() => this.setState({quickCheckoutPrint: !this.state.quickCheckoutPrint})}
-                                value={this.state.quickCheckoutPrint}
-                              />
-                            </View>
-                            <Text style={styles.flexButtonText}>
+
+                            <Text style={styles.flexButtonSecondActionText}>
                               {t('quickCheckout')}
                             </Text>
                           </TouchableOpacity>
                         </View>
-                      )}
-                      {['OPEN', 'IN_PROCESS', 'DELIVERED'].includes(order.state) && (
-                        <View style={{flex: 2, marginHorizontal: 5}}>
+                      </View>
+                      <View style={{flex: 1, marginHorizontal: 5}}>
+                        <View style={{flex: 1}}>
                           <TouchableOpacity
                             onPress={() =>
                               order.lineItems.length === 0
@@ -585,75 +588,174 @@ class OrderFormII extends React.Component {
                             </Text>
                           </TouchableOpacity>
                         </View>
-                      )}
-                      {!['OPEN'].includes(order.state) && (
-                        <View style={{flex: 2, marginHorizontal: 5}}>
-                          <TouchableOpacity
-                            onPress={() =>
-                              order.lineItems.length === 0
-                                ? warningMessage(t('lineItemCountCheck'))
-                                : handlePrintWorkingOrder(order.orderId)
-                            }
-                            style={styles.flexButton}
-                          >
-                            <Text style={styles.flexButtonText}>
-                              {t('printWorkingOrder')}
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                      {!['OPEN'].includes(order.state) && (
-                        <View style={{flex: 2, marginHorizontal: 5}}>
-                          <TouchableOpacity
-                            onPress={() =>
-                              order.lineItems.length === 0
-                                ? warningMessage(t('lineItemCountCheck'))
-                                : handlePrintOrderDetails(order.orderId)
-                            }
-                            style={styles.flexButton}
-                          >
-                            <Text style={styles.flexButtonText}>
-                              {t('printOrderDetails')}
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-
-                    </View>
-
-
-
-                    {["IN_PROCESS"].includes(order.state) && (
-                      <View style={{flex: 1, marginHorizontal: 5}}>
-                        <TouchableOpacity
-                          onPress={() => {
-                            this.handleDeliver(order.orderId);
-                          }}
-                          style={styles.flexButtonSecondAction}
-                        >
-                          <Text style={styles.flexButtonSecondActionText}>{t('deliverOrder')}</Text>
-                        </TouchableOpacity>
                       </View>
-
-                    )}
-
-                    {order.state === 'DELIVERED' && (
+                    </>
+                    }
+                    {order.state === 'IN_PROCESS' && <>
+                      <View style={{flex: 1, marginHorizontal: 0, flexDirection: 'row'}}>
+                        <DeleteBtn
+                          containerStyle={{
+                            flex: 1,
+                            alignItems: 'center',
+                            borderRadius: 4,
+                            borderWidth: 1,
+                            borderColor: '#f75336',
+                            justifyContent: 'center',
+                            backgroundColor: '#f75336',
+                          }}
+                          textStyle={{
+                            textAlign: 'center',
+                            fontSize: 16,
+                            color: '#fff',
+                          }}
+                          handleDeleteAction={() => handleDelete(order.orderId, () => NavigationService.navigate('TablesSrc'))}
+                        />
+                        <View style={{flex: 1, marginHorizontal: 5, flexDirection: 'column'}}>
+                          <View style={{flex: 1}}>
+                            <Field
+                              name="otherAction"
+                              component={DropDown}
+                              options={this.state.otherActionOptions}
+                              onChange={(value) => {
+                                this.setState({
+                                  otherAction: value
+                                })
+                              }}
+                            />
+                          </View>
+                          <View style={{flex: 1}}>
+                            {!!this.state?.otherAction &&
+                              <SecondActionButton
+                                onPress={() =>
+                                  order.lineItems.length === 0
+                                    ? warningMessage(t('lineItemCountCheck'))
+                                    : this.state?.otherAction === 'printOrderDetails' ? handlePrintOrderDetails(order.orderId) : handlePrintWorkingOrder(order.orderId)
+                                }
+                                containerStyle={styles.flexButtonSecondAction}
+                                style={styles.flexButtonSecondActionText}
+                                title={t(this.state?.otherAction)}
+                              />
+                            }
+                          </View>
+                        </View>
+                      </View>
                       <View style={{flex: 1, marginHorizontal: 5, flexDirection: 'row'}}>
-                        <View style={{flex: 2, marginHorizontal: 5}}>
+                        <View style={{flex: 1, flexDirection: 'column'}}>
                           <TouchableOpacity
                             onPress={() =>
                               order.lineItems.length === 0
                                 ? warningMessage(t('lineItemCountCheck'))
-                                : this.props.navigation.navigate('Payment', {
-                                  order: order
-                                })
+                                : handleOrderSubmit(order.orderId)
                             }
                             style={styles.flexButtonSecondAction}
                           >
-                            <Text style={styles.flexButtonSecondActionText}>{t('payOrder')}</Text>
+                            <Text style={styles.flexButtonSecondActionText}>
+                              {t('submitOrder')}
+                            </Text>
+                          </TouchableOpacity>
+                          <SecondActionButton
+                            onPress={() =>
+                              order.lineItems.length === 0
+                                ? warningMessage(t('lineItemCountCheck'))
+                                : Alert.alert(
+                                  `${t('quickCheckoutPrint')}`,
+                                  ``,
+                                  [
+                                    {
+                                      text: `${this.context.t('action.yes')}`,
+                                      onPress: async () => {
+                                        await handleQuickCheckout(order, true)
+                                      }
+                                    },
+                                    {
+                                      text: `${this.context.t('action.no')}`,
+                                      onPress: async () => await handleQuickCheckout(order, false),
+                                      style: 'cancel'
+                                    }
+                                  ]
+                                )
+                            }
+                            containerStyle={styles.flexButtonSecondAction}
+                            style={styles.flexButtonSecondActionText}
+                            title={t('quickCheckout')}
+                          />
+                        </View>
+                        <View style={{flex: 1, marginLeft: 5}}>
+                          <TouchableOpacity
+                            onPress={() => {
+                              this.handleDeliver(order.orderId);
+                            }}
+                            style={styles.flexButton}
+                          >
+                            <Text style={styles.flexButtonText}>{t('deliverOrder')}</Text>
                           </TouchableOpacity>
                         </View>
-                        <View style={{flex: 1, marginHorizontal: 5}}>
+                      </View>
+                    </>
+                    }
+                    {order.state === 'DELIVERED' && <>
+                      <View style={{flex: 1, marginHorizontal: 0, flexDirection: 'row'}}>
+                        <DeleteBtn
+                          containerStyle={{
+                            flex: 1,
+                            alignItems: 'center',
+                            borderRadius: 4,
+                            borderWidth: 1,
+                            borderColor: '#f75336',
+                            justifyContent: 'center',
+                            backgroundColor: '#f75336',
+                          }}
+                          textStyle={{
+                            textAlign: 'center',
+                            fontSize: 16,
+                            color: '#fff',
+                          }}
+                          handleDeleteAction={() => handleDelete(order.orderId, () => NavigationService.navigate('TablesSrc'))}
+                        />
+                        <View style={{flex: 1, marginHorizontal: 5, flexDirection: 'column'}}>
+                          <View style={{flex: 1}}>
+                            <Field
+                              name="otherAction"
+                              component={DropDown}
+                              options={this.state.otherActionOptions}
+                              onChange={(value) => {
+                                this.setState({
+                                  otherAction: value
+                                })
+                              }}
+                            />
+                          </View>
+                          <View style={{flex: 1}}>
+                            {!!this.state?.otherAction &&
+                              <SecondActionButton
+                                onPress={() =>
+                                  order.lineItems.length === 0
+                                    ? warningMessage(t('lineItemCountCheck'))
+                                    : this.state?.otherAction === 'printOrderDetails' ? handlePrintOrderDetails(order.orderId) : handlePrintWorkingOrder(order.orderId)
+                                }
+                                containerStyle={styles.flexButtonSecondAction}
+                                style={styles.flexButtonSecondActionText}
+                                title={t(this.state?.otherAction)}
+                              />
+                            }
+                          </View>
+                        </View>
+                      </View>
+
+                      <View style={{flex: 1, marginHorizontal: 5, flexDirection: 'row'}}>
+                        <View style={{flex: 1, flexDirection: 'column'}}>
+                          <TouchableOpacity
+                            onPress={() =>
+                              order.lineItems.length === 0
+                                ? warningMessage(t('lineItemCountCheck'))
+                                : handleOrderSubmit(order.orderId)
+                            }
+                            style={styles.flexButtonSecondAction}
+                          >
+                            <Text style={styles.flexButtonSecondActionText}>
+                              {t('submitOrder')}
+                            </Text>
+                          </TouchableOpacity>
                           <SecondActionButton
                             onPress={() => {
                               if (splitParentOrderId === null || splitParentOrderId === order?.orderId) {
@@ -692,24 +794,72 @@ class OrderFormII extends React.Component {
                             title={t('splitBill.SpiltBillScreenTitle')}
                           />
                         </View>
+                        <View style={{flex: 1, marginLeft: 5}}>
+                          <TouchableOpacity
+                            onPress={() =>
+                              order.lineItems.length === 0
+                                ? warningMessage(t('lineItemCountCheck'))
+                                : this.props.navigation.navigate('Payment', {
+                                  order: order
+                                })
+                            }
+                            style={styles.flexButton}
+                          >
+                            <Text style={styles.flexButtonText}>{t('payOrder')}</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </>
+                    }
+                    {order.state === 'SETTLED' && <>
+                      <View style={{flex: 1, marginHorizontal: 0, flexDirection: 'row'}}>
+                        <View style={{flex: 1, marginHorizontal: 5, flexDirection: 'column'}}>
+                          <View style={{flex: 1}}>
+                            <Field
+                              name="otherAction"
+                              component={DropDown}
+                              options={this.state.otherActionOptions}
+                              onChange={(value) => {
+                                this.setState({
+                                  otherAction: value
+                                })
+                              }}
+                            />
+                          </View>
+                          <View style={{flex: 1}}>
+                            {!!this.state?.otherAction &&
+                              <SecondActionButton
+                                onPress={() =>
+                                  order.lineItems.length === 0
+                                    ? warningMessage(t('lineItemCountCheck'))
+                                    : this.state?.otherAction === 'printOrderDetails' ? handlePrintOrderDetails(order.orderId) : handlePrintWorkingOrder(order.orderId)
+                                }
+                                containerStyle={styles.flexButtonSecondAction}
+                                style={styles.flexButtonSecondActionText}
+                                title={t(this.state?.otherAction)}
+                              />
+                            }
+                          </View>
+                        </View>
+
                       </View>
 
-                    )}
+                      <View style={{flex: 1, marginHorizontal: 5, flexDirection: 'row'}}>
 
-                    {order.state === 'SETTLED' && (
-                      <View style={{flex: 1, marginHorizontal: 5}}>
-                        <TouchableOpacity
-                          onPress={() => this.handleComplete(order.orderId)}
-                          style={styles.flexButtonSecondAction}
-                        >
-                          <Text style={styles.flexButtonSecondActionText}>{t('completeOrder')}</Text>
-                        </TouchableOpacity>
+                        <View style={{flex: 1, marginLeft: 5}}>
+                          <TouchableOpacity
+                            onPress={() => this.handleComplete(order.orderId)}
+                            style={styles.flexButtonSecondAction}
+                          >
+                            <Text style={styles.flexButtonSecondActionText}>{t('completeOrder')}</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                    )}
-
-
+                    </>
+                    }
                   </View>
                 </View>
+
                 <View style={styles.orderItemRightList}>
                   <View style={{flex: 5}}>
                     <ScrollView style={{flex: 1}}>

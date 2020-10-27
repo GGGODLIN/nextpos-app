@@ -175,7 +175,7 @@ export const handlePrintOrderDetails = (orderId) => {
   }).then()
 }
 
-export const handleQuickCheckout = (order, print) => {
+export const handleQuickCheckout = async (order, print) => {
   const formData = new FormData()
   formData.append('print', print)
 

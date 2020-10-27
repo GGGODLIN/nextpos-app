@@ -34,8 +34,8 @@ class OptionFormScreen extends React.Component {
         productOptionTitle: 'Product Option',
         optionName: 'Option Name',
         required: 'Required',
-        usedByProducts: 'Used by following products',
-        usedByProductLabels: 'Used by following categorys',
+        usedByProducts: 'Used by the following products',
+        usedByProductLabels: 'Used by the following categorys',
         multiple: 'Multiple',
         values: 'Option Values',
         value: 'Option Value',
@@ -179,7 +179,7 @@ class OptionFormScreen extends React.Component {
               <View style={[styles.tableCellView, {flex: 2, justifyContent: 'flex-end', flexWrap: 'wrap'}]}>
                 {initialValues?.usedByProducts?.map((item, index, array) => {
                   return (
-                    <StyledText style={styles.fieldTitle}>{item?.name}{(index < array?.length - 1) && ' , '}</StyledText>
+                    <StyledText style={styles.fieldTitle}>{item?.name}{(index < array?.length - 1) && ', '}</StyledText>
                   )
                 })}
               </View>
@@ -193,7 +193,7 @@ class OptionFormScreen extends React.Component {
               <View style={[styles.tableCellView, {flex: 2, justifyContent: 'flex-end', flexWrap: 'wrap'}]}>
                 {initialValues?.usedByProductLabels?.map((item, index, array) => {
                   return (
-                    <StyledText style={styles.fieldTitle}>{item?.name}{(index < array?.length - 1) && ' , '}</StyledText>
+                    <StyledText style={styles.fieldTitle}>{item?.name}{(index < array?.length - 1) && ', '}</StyledText>
                   )
                 })}
               </View>

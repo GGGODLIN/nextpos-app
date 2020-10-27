@@ -341,13 +341,14 @@ class OrderItemOptions extends React.Component {
         }
     }
 
-    invalidCallBack = (index) => {
-        let oldActiveSectionsArr = [...this.state.activeSections]
-        let oldActiveSectionsSet = new Set(oldActiveSectionsArr)
-        oldActiveSectionsSet.add(index)
-        let newActiveSectionsArr = Array.from(oldActiveSectionsSet)
-        this.setState({activeSections: newActiveSectionsArr})
-    }
+    // keep for future reference
+    // invalidCallBack = (index) => {
+    //     let oldActiveSectionsArr = [...this.state.activeSections]
+    //     let oldActiveSectionsSet = new Set(oldActiveSectionsArr)
+    //     oldActiveSectionsSet.add(index)
+    //     let newActiveSectionsArr = Array.from(oldActiveSectionsSet)
+    //     this.setState({activeSections: newActiveSectionsArr})
+    // }
 
     componentDidMount() {
         if (!!this.props?.product?.productOptions) {
@@ -395,9 +396,9 @@ class OrderItemOptions extends React.Component {
                                     {product.productOptions.map((prdOption, optionIndex) => {
                                         const requiredOption = prdOption.required
 
-                                        var ArrForTrueState = []
+                                        var arrForTrueState = []
                                         prdOption.optionValues.map((optVal, x) => {
-                                            ArrForTrueState.push({
+                                            arrForTrueState.push({
                                                 optionName: prdOption.optionName,
                                                 optionValue: optVal.value,
                                                 optionPrice: optVal.price,
@@ -410,7 +411,6 @@ class OrderItemOptions extends React.Component {
                                                 header={<View style={styles.listPanel}>
                                                     <StyledText style={styles.listPanelText}>{prdOption.optionName}</StyledText>
                                                 </View>}
-                                            //key={lbl.id}
                                             >
                                                 <View
                                                     key={prdOption.versionId}
@@ -448,7 +448,7 @@ class OrderItemOptions extends React.Component {
                                                                 <Field
                                                                     name={`productOptions[${optionIndex}]`}
                                                                     component={CheckBoxGroupObjPick}
-                                                                    customarr={ArrForTrueState}
+                                                                    customarr={arrForTrueState}
                                                                     validate={requiredOption ? isRequired : null}
                                                                 />
                                                             </View>

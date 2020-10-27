@@ -127,10 +127,7 @@ class PopUpBase extends Component {
                 dataArr={[]}
                 navigation={this.props.navigation}
                 params={[{},{}]}
-                
-
 */
-
 export const PopUp = withContext(PopUpBase)
 
 class CustomPopUpBase extends Component {

@@ -300,6 +300,7 @@ const zh = {
   productOption: '產品註記',
   printWorkingOrder: '列印工作單',
   printOrderDetails: '列印明細',
+  quickCheckoutPrint: '是否列印工作單?',
 }
 
 export default zh
