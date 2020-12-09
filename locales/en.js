@@ -37,6 +37,7 @@ const en = {
     eInvoice: 'E-invoice',
     subscription: 'Subscription',
     roster: 'Roster',
+    member: 'Membership'
   },
   newItem: {
     new: 'New',
@@ -304,6 +305,7 @@ const en = {
       workingAreaInUse: 'This working area is already in use',
       printerHasWorkingArea: 'This printer is used by working area',
       optionInUse: 'This option is already in use',
+      emptyTables: 'Please select tables',
     }
   },
   eInvoice: {

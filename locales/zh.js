@@ -37,6 +37,7 @@ const zh = {
     eInvoice: '電子發票',
     subscription: '訂閱',
     roster: '排班管理',
+    member: '會員管理'
   },
   newItem: {
     new: '新增',
@@ -306,6 +307,7 @@ const zh = {
       workingAreaInUse: '此工作區正在使用中',
       printerHasWorkingArea: '此出單機有使用中的工作區',
       optionInUse: '此註記正在使用中',
+      emptyTables: '請選擇桌位',
     }
   },
   eInvoice: {
