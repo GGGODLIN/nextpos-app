@@ -482,6 +482,10 @@ export const api = {
     updateOrderMembership: (orderId) => {
       return `${apiRoot}/orders/${orderId}/membership`
     },
+    getMembers: `${apiRoot}/memberships`,
+    deleteById: (id) => {
+      return `${apiRoot}/memberships/${id}`
+    },
   },
 }
 

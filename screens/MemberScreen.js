@@ -1,5 +1,5 @@
 import React from 'react'
-import {FlatList, TouchableOpacity, View, Text} from 'react-native'
+import {FlatList, TouchableOpacity, View, Text, Dimensions} from 'react-native'
 import {connect} from 'react-redux'
 import {Field, reduxForm} from 'redux-form'
 import ScreenHeader from "../components/ScreenHeader"
@@ -10,7 +10,7 @@ import LoadingScreen from "./LoadingScreen"
 import styles, {mainThemeColor} from '../styles'
 import {ThemeScrollView} from "../components/ThemeScrollView";
 import {StyledText} from "../components/StyledText";
-import {api, dispatchFetchRequest} from '../constants/Backend'
+import {api, dispatchFetchRequest, dispatchFetchRequestWithOption, successMessage, warningMessage} from '../constants/Backend'
 import {NavigationEvents} from 'react-navigation'
 import {MainActionFlexButton, DeleteFlexButton} from "../components/ActionButtons";
 import DeleteBtn from '../components/DeleteBtn'
@@ -20,6 +20,10 @@ import Icon from 'react-native-vector-icons/Ionicons'
 import InputText from '../components/InputText'
 import {isRequired} from '../validators'
 import SegmentedControl from "../components/SegmentedControl";
+import {RenderDatePicker} from '../components/DateTimePicker'
+import {normalizeTimeString} from '../actions'
+import moment from 'moment-timezone'
+import TimeZoneService from "../helpers/TimeZoneService";
 
 class MemberScreen extends React.Component {
     static navigationOptions = {
@@ -31,17 +35,39 @@ class MemberScreen extends React.Component {
         super(props, context)
         this.state = {
             isLoading: false,
-            screenMode: 'normal'
+            screenMode: 'normal',
+            membersData: [],
+            searchKeyword: null,
+            searching: false,
+            searchResults: [],
+            itemData: null,
+            showDatePicker: false,
         }
         this.context.localize({
             en: {
                 member: {
-
+                    searchPrompt: 'Search By Phone Number',
+                    MALE: 'Male',
+                    FEMALE: 'Female',
+                    name: 'Name',
+                    phoneNumber: 'Phone Number',
+                    gender: 'Gender',
+                    birthday: 'Birthday',
+                    tags: 'Tag',
+                    creatMember: 'Creat Member'
                 }
             },
             zh: {
                 member: {
-
+                    searchPrompt: '以聯絡電話搜尋',
+                    MALE: '男',
+                    FEMALE: '女',
+                    name: '姓名',
+                    phoneNumber: '聯絡電話',
+                    gender: '性別',
+                    birthday: '生日',
+                    tags: '會員標籤',
+                    creatMember: '新增會員'
                 }
             }
         })
@@ -50,24 +76,27 @@ class MemberScreen extends React.Component {
     componentDidMount() {
 
         this.props.getCurrentClient()
-        this.getPlans()
+        this.getMembers()
     }
 
-    componentDidUpdate(prevProps, prevState) {
-        if (this.props?.client !== prevProps?.client) {
-            this.refreshScreen()
-        }
-    }
+
 
     refreshScreen = () => {
-        this.getPlans()
+        this.setState({
+            screenMode: 'normal',
+            itemData: null,
+            showDatePicker: false,
+        })
+        this.getMembers()
+        this.props?.reset()
     }
 
-    getPlans = async () => {
+
+    getMembers = async () => {
         //if need loading pending
         //this.setState({isLoading: true})
 
-        await dispatchFetchRequest(api.roster.getAllPlans, {
+        await dispatchFetchRequest(api.membership.getMembers, {
             method: 'GET',
             withCredentials: true,
             credentials: 'include',
@@ -76,68 +105,134 @@ class MemberScreen extends React.Component {
             },
         }, response => {
             response.json().then(data => {
-                this.setState({rosterPlansData: data?.results ?? [], isLoading: false})
+                //console.log('membersData', data)
+                this.setState({membersData: data?.results ?? [], isLoading: false})
             })
         }).then()
     }
 
-    handleCreatEvent = (id) => {
-        dispatchFetchRequest(api.roster.createEvents(id), {
-            method: 'POST',
-            withCredentials: true,
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-        }, response => {
-            this.refreshScreen()
-        }).then()
+    searchMember = (keyword) => {
+        if (keyword !== '') {
+            this.setState({searching: true})
+
+            dispatchFetchRequest(api.membership.getByPhone(keyword), {
+                method: 'GET',
+                withCredentials: true,
+                credentials: 'include',
+                headers: {}
+            }, response => {
+                response.json().then(data => {
+                    console.log('searchMember', data)
+                    this.setState({
+                        searchResults: data.results,
+                        searching: false
+                    })
+                })
+            }).then()
+        }
+
     }
 
-    handleDeleteEvent = (id) => {
-        dispatchFetchRequest(api.roster.createEvents(id), {
+    handleSubmit = (values, memId = null) => {
+
+        const timezone = TimeZoneService.getTimeZone()
+        const i18nMoment = moment(values?.birthday).tz(timezone)
+        if (!!memId) {
+            let request = {
+                name: values?.name,
+                phoneNumber: values?.phoneNumber,
+                birthday: i18nMoment.tz(timezone).format("YYYY-MM-DD"),
+                gender: values?.gender === 0 ? 'MALE' : 'FEMALE',
+                tags: [values?.tags],
+            }
+            dispatchFetchRequestWithOption(api.membership.update(memId), {
+                method: 'POST',
+                withCredentials: true,
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }, {
+                defaultMessage: true
+            }, response => {
+
+                response.json().then(data => {
+                    this.refreshScreen()
+                })
+            }).then()
+        } else {
+            let request = {
+                name: values?.name,
+                phoneNumber: values?.phoneNumber,
+                birthday: i18nMoment.tz(timezone).format("YYYY-MM-DD"),
+                gender: values?.gender === 0 ? 'MALE' : 'FEMALE',
+                tags: [values?.tags],
+            }
+            console.log('request', request)
+            dispatchFetchRequestWithOption(api.membership.creat, {
+                method: 'POST',
+                withCredentials: true,
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }, {
+                defaultMessage: true
+            }, response => {
+                response.json().then(data => {
+                    this.refreshScreen()
+                })
+
+            }).then()
+        }
+
+
+    }
+
+    handleDeleteMember = (id) => {
+        dispatchFetchRequestWithOption(api.membership.deleteById(id), {
             method: 'DELETE',
             withCredentials: true,
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
             },
+        }, {
+            defaultMessage: true
         }, response => {
 
             this.refreshScreen()
         }).then()
     }
 
-    Item = (item) => {
+
+
+    Item = (item, isSearch = false) => {
         return (
-            <View style={styles.rowFront}>
+            <View style={[styles.rowFront, isSearch && {borderBottomColor: mainThemeColor}]}>
                 <TouchableOpacity
                     onPress={() => {
-                        this.props.navigation.navigate('RostersFormScreen', {
-                            data: item,
-                            refreshScreen: () => {this.refreshScreen()},
-                        })
+                        console.log(item)
+                        this.props?.change(`name`, item?.name)
+                        this.props?.change(`phoneNumber`, item?.phoneNumber)
+                        this.props?.change(`birthday`, new Date(item?.birthday))
+                        this.props?.change(`gender`, item?.gender === 'FEMALE' ? 1 : 0)
+                        this.props?.change(`tags`, item?.tags?.[0])
+                        this.setState({screenMode: 'editForm', itemData: item})
                     }}
                     style={{flexDirection: 'row', justifyContent: 'space-between'}}
                 >
-                    <StyledText style={styles.rowFrontText}>{item?.rosterMonth}</StyledText>
-                    <View style={{width: 160, padding: 4}}>
-                        {item?.status === 'ACTIVE'
-                            ? <MainActionFlexButton
-                                title={this.context.t('roster.createEvent')}
-                                onPress={() => {this.handleCreatEvent(item?.id)}} />
-                            : <DeleteFlexButton
-                                title={this.context.t('roster.deleteEvent')}
-                                onPress={() => {this.handleDeleteEvent(item?.id)}} />
-                        }
-                    </View>
+                    <StyledText style={styles.rowFrontText}>{item?.name}</StyledText>
+
                 </TouchableOpacity>
-            </View>
+            </View >
         );
     }
 
     render() {
-        const {navigation, offers, isLoading} = this.props
+        const {navigation, offers, isLoading, handleSubmit} = this.props
         const {t, isTablet, themeStyle} = this.context
 
         if (isLoading || this.state.isLoading) {
@@ -145,7 +240,7 @@ class MemberScreen extends React.Component {
                 <LoadingScreen />
             )
         } else {
-            if (true) {
+            if (isTablet) {
                 return (
                     <ThemeContainer>
                         <View style={[styles.fullWidthScreen]}>
@@ -159,9 +254,9 @@ class MemberScreen extends React.Component {
 
                             />
                             <View style={{flexDirection: 'row', flex: 1}}>
-                                <View style={{flex: 1}}>
-                                    <SearchBar placeholder={'搜尋會員'}
-                                        onChangeText={this.searchProduct}
+                                <View style={{flex: 1, borderRightWidth: 1, borderColor: mainThemeColor, paddingRight: 3}}>
+                                    <SearchBar placeholder={t('member.searchPrompt')}
+                                        onChangeText={this.searchMember}
                                         onClear={() => {
                                             this.setState({searchResults: []})
                                         }}
@@ -180,38 +275,24 @@ class MemberScreen extends React.Component {
                                         inputStyle={{backgroundColor: themeStyle.backgroundColor}}
                                         inputContainerStyle={{borderRadius: 0, backgroundColor: themeStyle.backgroundColor}}
                                     />
-                                    {/* <FlatList
-                                        data={this?.state?.rosterPlansData ?? []}
+
+                                    <FlatList
+                                        style={{maxHeight: Dimensions.get('window').height / 3, paddingBottom: 1}}
+                                        data={this.state.searchResults}
+                                        renderItem={({item}) => this.Item(item, true)}
+                                    />
+
+                                    <FlatList
+                                        data={this?.state?.membersData ?? []}
                                         renderItem={({item}) => this.Item(item)}
-                                        keyExtractor={(item) => item?.rangeIdentifier}
+                                        keyExtractor={(item) => item?.id}
                                         ListEmptyComponent={
                                             <View>
                                                 <StyledText style={styles.messageBlock}>{t('general.noData')}</StyledText>
                                             </View>
                                         }
-                                    /> */}
+                                    />
 
-                                    <View style={styles.rowFront}>
-                                        <TouchableOpacity
-                                            style={{flexDirection: 'row', justifyContent: 'space-between'}}
-                                        >
-                                            <StyledText style={styles.rowFrontText}>{'Ivy'}</StyledText>
-                                        </TouchableOpacity>
-                                    </View>
-                                    <View style={styles.rowFront}>
-                                        <TouchableOpacity
-                                            style={{flexDirection: 'row', justifyContent: 'space-between'}}
-                                        >
-                                            <StyledText style={styles.rowFrontText}>{'Finny'}</StyledText>
-                                        </TouchableOpacity>
-                                    </View>
-                                    <View style={styles.rowFront}>
-                                        <TouchableOpacity
-                                            style={{flexDirection: 'row', justifyContent: 'space-between'}}
-                                        >
-                                            <StyledText style={styles.rowFrontText}>{'Eddie'}</StyledText>
-                                        </TouchableOpacity>
-                                    </View>
                                 </View>
 
                                 {this.state.screenMode === 'normal' && <View style={{flex: 3, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center'}}>
@@ -221,14 +302,14 @@ class MemberScreen extends React.Component {
                                         }
                                         type='outline'
                                         raised
-                                        onPress={() => this.setState({screenMode: 'form'})}
+                                        onPress={() => this.setState({screenMode: 'newForm'})}
                                         buttonStyle={{minWidth: 320, borderColor: mainThemeColor, backgroundColor: themeStyle.backgroundColor}}
-                                        title={'新增會員'}
+                                        title={t('member.creatMember')}
                                         titleStyle={{marginLeft: 10, color: mainThemeColor}}
                                     />
                                 </View>}
 
-                                {this.state.screenMode === 'form' && <View style={{flex: 3, paddingHorizontal: 10, justifyContent: 'flex-start'}}>
+                                {(this.state.screenMode === 'newForm' || this.state.screenMode === 'editForm') && <View style={{flex: 3, paddingHorizontal: 10, justifyContent: 'flex-start'}}>
                                     <View style={{minHeight: 200, flex: 1}}>
                                         <View style={styles.fieldContainer}>
                                             <View style={[styles.tableCellView, {flex: 1}]}>
@@ -236,10 +317,11 @@ class MemberScreen extends React.Component {
                                             </View>
                                             <View style={[styles.tableCellView, {flex: 3, justifyContent: 'flex-end'}]}>
                                                 <Field
-                                                    name="status"
+                                                    name="name"
                                                     component={InputText}
-                                                    placeholder="Finny"
+                                                    placeholder={t('member.name')}
                                                     editable={true}
+                                                    validate={[isRequired]}
                                                 />
                                             </View>
                                         </View>
@@ -249,10 +331,11 @@ class MemberScreen extends React.Component {
                                             </View>
                                             <View style={[styles.tableCellView, {flex: 3, justifyContent: 'flex-end'}]}>
                                                 <Field
-                                                    name="status"
+                                                    name="phoneNumber"
                                                     component={InputText}
-                                                    placeholder="0975648237"
-                                                    editable={true}
+                                                    placeholder={t('member.phoneNumber')}
+                                                    editable={this.state.screenMode !== 'editForm'}
+                                                    validate={[isRequired]}
                                                 />
                                             </View>
                                         </View>
@@ -264,11 +347,11 @@ class MemberScreen extends React.Component {
                                             </View>
                                             <View style={{flexDirection: 'column', flex: 3, maxWidth: 640, paddingVertical: 10, }}>
                                                 <Field
-                                                    name="operationStatus"
+                                                    name="gender"
                                                     component={SegmentedControl}
-                                                    selectedIndex={0}
-                                                    onChange={(index) => {}}
-                                                    values={['男', '女', '其他']}
+                                                    // selectedIndex={this.state?.itemData?.gender === 'FEMALE' ? 1:0}
+                                                    // onChange={(index) => {}}
+                                                    values={[t(`member.MALE`), t(`member.FEMALE`)]}
                                                     validate={[isRequired]}
                                                 />
                                             </View>
@@ -278,11 +361,17 @@ class MemberScreen extends React.Component {
                                                 <StyledText style={styles.fieldTitle}>{'生日'}</StyledText>
                                             </View>
                                             <View style={[styles.tableCellView, {flex: 3, justifyContent: 'flex-end'}]}>
+
                                                 <Field
-                                                    name="status"
-                                                    component={InputText}
-                                                    placeholder="1990-01-01"
-                                                    editable={true}
+                                                    name={`birthday`}
+                                                    component={RenderDatePicker}
+                                                    mode='date'
+                                                    onChange={(date) => {}}
+                                                    placeholder={t('order.fromDate')}
+                                                    isShow={this.state.showDatePicker ?? false}
+                                                    showDatepicker={() => this.setState({showDatePicker: !this.state?.showDatePicker})}
+                                                //defaultValue={normalizeTimeString(item?.startTime)}
+                                                //readonly={index <= this.state.rosterEntriesLength - 1 ? true : false}
                                                 />
                                             </View>
                                         </View>
@@ -292,115 +381,41 @@ class MemberScreen extends React.Component {
                                             </View>
                                             <View style={[styles.tableCellView, {flex: 3, justifyContent: 'flex-end'}]}>
                                                 <Field
-                                                    name="status"
+                                                    name="tags"
                                                     component={InputText}
-                                                    placeholder='VIP'
+                                                    placeholder={t('member.tags')}
                                                     editable={true}
                                                 />
                                             </View>
                                         </View>
 
-                                        <View style={styles.fieldContainer}>
 
-                                            <View style={[styles.tableCellView,
-                                            styles.rootInput,
-                                                themeStyle,
-                                            styles.withBorder, {flex: 1, justifyContent: 'space-between'}]}>
-                                                <StyledText style={styles.fieldTitle}>近五筆消費記錄</StyledText>
-                                                <View>
-                                                    <Icon name="md-arrow-dropdown" size={32} color={mainThemeColor} />
-                                                </View>
-                                            </View>
-                                        </View>
-
-                                        <View style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                            marginTop: 2,
-                                        }}>
-                                            <View style={[styles.tableCellView,
-                                            styles.rootInput,
-                                                themeStyle,
-                                            styles.withBorder, {flex: 1, justifyContent: 'space-between'}]}>
-                                                <StyledText style={styles.fieldTitle}>消費愛好前五名</StyledText>
-                                                <View>
-                                                    <Icon name="md-arrow-dropup" size={32} color={mainThemeColor} />
-                                                </View>
-                                            </View>
-
-                                        </View>
-                                        <View style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                        }}>
-                                            <View style={[styles.tableCellView,
-                                            styles.rootInput,
-                                                themeStyle,
-                                            styles.withBorder, {flex: 1, justifyContent: 'center', borderTopWidth: 0}]}>
-                                                <StyledText >明太子天使義大利麵</StyledText>
-                                            </View>
-                                        </View>
-                                        <View style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                        }}>
-                                            <View style={[styles.tableCellView,
-                                            styles.rootInput,
-                                                themeStyle,
-                                            styles.withBorder, {flex: 1, justifyContent: 'center', borderTopWidth: 0}]}>
-                                                <StyledText >冰美式</StyledText>
-                                            </View>
-                                        </View>
-                                        <View style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                        }}>
-                                            <View style={[styles.tableCellView,
-                                            styles.rootInput,
-                                                themeStyle,
-                                            styles.withBorder, {flex: 1, justifyContent: 'center', borderTopWidth: 0}]}>
-                                                <StyledText >焦糖拿鐵</StyledText>
-                                            </View>
-                                        </View>
-                                        <View style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                        }}>
-                                            <View style={[styles.tableCellView,
-                                            styles.rootInput,
-                                                themeStyle,
-                                            styles.withBorder, {flex: 1, justifyContent: 'center', borderTopWidth: 0}]}>
-                                                <StyledText >鮮橙綠茶</StyledText>
-                                            </View>
-                                        </View>
-                                        <View style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                        }}>
-                                            <View style={[styles.tableCellView,
-                                            styles.rootInput,
-                                                themeStyle,
-                                            styles.withBorder, {flex: 1, justifyContent: 'center', borderTopWidth: 0}]}>
-                                                <StyledText >紅茶拿鐵</StyledText>
-                                            </View>
-                                        </View>
 
                                     </View>
-                                    <View style={[{flexDirection: 'row', flex: 1, alignItems: 'flex-end'}]}>
+                                    <View style={[{flex: 1, justifyContent: 'flex-end', paddingHorizontal: '20%'}]}>
                                         <TouchableOpacity
-                                            onPress={() => this.setState({screenMode: 'normal'})}
-                                            style={{flex: 1, marginRight: 10}}>
-                                            <Text style={[styles.bottomActionButton, styles.cancelButton]}>
-                                                {t('action.cancel')}
-                                            </Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={{flex: 1}}
+                                            onPress={handleSubmit(data => {
+                                                //console.log('handleSubmit', data)
+                                                this.handleSubmit(data, this.state?.itemData?.id)
+                                            })}
                                         >
                                             <Text style={[styles.bottomActionButton, styles.actionButton]}>
                                                 {'確認'}
                                             </Text>
 
                                         </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                this.props?.reset()
+                                                this.setState({screenMode: 'normal'})
+                                            }}
+                                        >
+                                            <Text style={[styles.bottomActionButton, styles.cancelButton]}>
+                                                {t('action.cancel')}
+                                            </Text>
+                                        </TouchableOpacity>
+
+                                        {this.state.screenMode === 'editForm' && <DeleteBtn handleDeleteAction={() => this.handleDeleteMember(this.state?.itemData?.id)} />}
                                     </View>
                                 </View>}
                             </View>
@@ -409,7 +424,7 @@ class MemberScreen extends React.Component {
                 )
             } else {
                 return (
-                    <ThemeScrollView>
+                    <ThemeContainer>
                         <View style={[styles.fullWidthScreen]}>
                             <NavigationEvents
                                 onWillFocus={() => {
@@ -418,23 +433,56 @@ class MemberScreen extends React.Component {
                             />
                             <ScreenHeader title={t('settings.member')}
                                 parentFullScreen={true}
-                                rightComponent={
-                                    <AddBtn
-                                        onPress={() => navigation.navigate('RostersFormScreen', {data: null, refreshScreen: this.refreshScreen, })}
-                                    />}
+
                             />
-                            <FlatList
-                                data={this?.state?.rosterPlansData ?? []}
-                                renderItem={({item}) => this.Item(item)}
-                                keyExtractor={(item) => item?.rangeIdentifier}
-                                ListEmptyComponent={
-                                    <View>
-                                        <StyledText style={styles.messageBlock}>{t('general.noData')}</StyledText>
-                                    </View>
-                                }
-                            />
+                            <View style={{flexDirection: 'row', flex: 1}}>
+                                <View style={{flex: 1}}>
+                                    <SearchBar placeholder={t('member.searchPrompt')}
+                                        onChangeText={this.searchMember}
+                                        onClear={() => {
+                                            this.setState({searchResults: []})
+                                        }}
+                                        value={this.state.searchKeyword}
+                                        showLoading={this.state.searching}
+                                        lightTheme={false}
+                                        // reset the container style.
+                                        containerStyle={{
+                                            padding: 4,
+                                            borderRadius: 0,
+                                            borderWidth: 0,
+                                            borderTopWidth: 0,
+                                            borderBottomWidth: 0,
+                                            backgroundColor: mainThemeColor
+                                        }}
+                                        inputStyle={{backgroundColor: themeStyle.backgroundColor}}
+                                        inputContainerStyle={{borderRadius: 0, backgroundColor: themeStyle.backgroundColor}}
+                                    />
+
+                                    <FlatList
+                                        style={{maxHeight: Dimensions.get('window').height / 3}}
+                                        data={this.state.searchResults}
+                                        renderItem={({item}) => this.Item(item)}
+                                    />
+
+                                    <FlatList
+                                        data={this?.state?.membersData ?? []}
+                                        renderItem={({item}) => this.Item(item)}
+                                        keyExtractor={(item) => item?.id}
+                                        ListEmptyComponent={
+                                            <View>
+                                                <StyledText style={styles.messageBlock}>{t('general.noData')}</StyledText>
+                                            </View>
+                                        }
+                                    />
+
+                                </View>
+
+
+
+
+                            </View>
                         </View>
-                    </ThemeScrollView>
+                    </ThemeContainer >
                 )
             }
         }

@@ -1,7 +1,7 @@
 import React from 'react'
 import {Text, TouchableOpacity, View} from 'react-native'
 import {Field, reduxForm} from 'redux-form'
-import RenderDatePicker from '../components/DateTimePicker'
+import RenderDateTimePicker from '../components/DateTimePicker'
 import DropDown from '../components/DropDown'
 import {LocaleContext} from '../locales/LocaleContext'
 import styles from '../styles'
@@ -98,7 +98,7 @@ class OrderFilterForm extends React.Component {
           <View style={[styles.tableCellView, {flex: 3}]}>
             <Field
               name="fromDate"
-              component={RenderDatePicker}
+              component={RenderDateTimePicker}
               onChange={this.handlegetDate}
               placeholder={t('order.fromDate')}
               isShow={this.state.showFromDate}
@@ -112,7 +112,7 @@ class OrderFilterForm extends React.Component {
           <View style={[styles.tableCellView, {flex: 3}]}>
             <Field
               name="toDate"
-              component={RenderDatePicker}
+              component={RenderDateTimePicker}
               onChange={this.handlegetDate}
               placeholder={t('order.toDate')}
               isShow={this.state.showToDate}
