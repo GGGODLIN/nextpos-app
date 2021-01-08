@@ -24,7 +24,8 @@ class AccountScreen extends React.Component {
     super(props, context)
 
     this.state = {
-      objects: []
+      objects: [],
+      adminPressCount: 0
     }
   }
 
@@ -133,11 +134,19 @@ class AccountScreen extends React.Component {
             <View style={[styles.tableCellView, {flex: 1}]}>
               <StyledText style={styles.fieldTitle}>{t('updateDate')}</StyledText>
             </View>
-            <View style={[styles.tableCellView, {flex: 3, justifyContent: 'flex-end'}]}>
+            <TouchableOpacity
+              onPress={() => this.setState({adminPressCount: this.state?.adminPressCount + 1})}
+              onLongPress={() => {
+                if (this.state?.adminPressCount >= 10) {
+                  this.setState({adminPressCount: 0})
+                  this.props.navigation.navigate('TestScreen')
+                }
+              }}
+              style={[styles.tableCellView, {justifyContent: 'flex-end'}]}>
               <StyledText>
                 2021-01-07
               </StyledText>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/*{currentUser.defaultUser && (
