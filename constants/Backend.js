@@ -100,6 +100,21 @@ export const api = {
       return `${apiRoot}/inventories/${id}/quantities/${sku}`
     },
   },
+  inventoryOrders: {
+    new: `${apiRoot}/inventoryOrders`,
+    getById: id => {
+      return `${apiRoot}/inventoryOrders/${id}`
+    },
+    process: id => {
+      return `${apiRoot}/inventoryOrders/${id}/process`
+    },
+    copy: id => {
+      return `${apiRoot}/inventoryOrders/${id}/copy`
+    },
+    delete: id => {
+      return `${apiRoot}/inventoryOrders/${id}`
+    },
+  },
   product: {
     new: `${apiRoot}/products`,
     getById: id => {

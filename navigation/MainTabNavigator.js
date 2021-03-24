@@ -94,6 +94,8 @@ import MemberScreen from '../screens/MemberScreen'
 import MemberFormScreen from '../screens/MemberFormScreen'
 import RetailOrderForm from '../screens/RetailOrderForm'
 import RetailCheckoutComplete from '../screens/RetailCheckoutComplete'
+import InventoryScreen from '../screens/InventoryScreen'
+import InventoryOrderScreen from '../screens/InventoryOrderScreen'
 
 const Home = createStackNavigator({
   LoginSuccess: LoginSuccessScreen,
@@ -235,11 +237,12 @@ Reports.navigationOptions = ({screenProps: {t}}) => ({
 })
 
 const Inventory = createStackNavigator({
-  Reports: ReportsScreen,
+  InventoryScreen: InventoryScreen,
+  InventoryOrderScreen: InventoryOrderScreen,
 
 })
 Inventory.navigationOptions = ({screenProps: {t, appType}}) => ({
-  title: t('menu.reporting'),
+  title: t('inventory.title'),
   tabBarButtonComponent: (props) => (appType === 'retail' ?
     <TabBarIcon focused={props?.focused} name="inventory" onPress={props?.onPress} iconLib={'MaterialIcons'} />
     : null

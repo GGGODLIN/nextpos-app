@@ -513,6 +513,19 @@ const en = {
     showInRoster: 'Show in Roster Screen',
     showInProduct: 'Show in Product Screen',
   },
+  inventory: {
+    title: '庫存管理',
+    inventoryEditFormTitle: '編輯庫存',
+    inventoryNewFormTitle: '新增庫存',
+    sku: 'SKU',
+    name: '標籤',
+    unitOfMeasure: '單位',
+    baseUnitQuantity: '每單位個數',
+    quantity: '單位數量',
+    minimumStockLevel: '最小庫存量',
+    addInventory: '新增一筆庫存',
+    deleteAllInventory: '刪除全部庫存',
+  }
 }
 
 export default en
