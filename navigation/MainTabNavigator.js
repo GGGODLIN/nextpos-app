@@ -96,6 +96,7 @@ import RetailOrderForm from '../screens/RetailOrderForm'
 import RetailCheckoutComplete from '../screens/RetailCheckoutComplete'
 import InventoryScreen from '../screens/InventoryScreen'
 import InventoryOrderScreen from '../screens/InventoryOrderScreen'
+import InventoryOrderFormScreen from '../screens/InventoryOrderFormScreen'
 
 const Home = createStackNavigator({
   LoginSuccess: LoginSuccessScreen,
@@ -239,6 +240,7 @@ Reports.navigationOptions = ({screenProps: {t}}) => ({
 const Inventory = createStackNavigator({
   InventoryScreen: InventoryScreen,
   InventoryOrderScreen: InventoryOrderScreen,
+  InventoryOrderFormScreen, InventoryOrderFormScreen
 
 })
 Inventory.navigationOptions = ({screenProps: {t, appType}}) => ({

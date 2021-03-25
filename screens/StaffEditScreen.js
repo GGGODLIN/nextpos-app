@@ -22,7 +22,7 @@ class StaffEditScreen extends Component {
   }
 
   handleEditCancel = () => {
-    this.props.clearClient()
+    //this.props.clearClient()
     this.props.getClientUsrs()
     this.props.navigation.navigate('StaffsOverview')
   }

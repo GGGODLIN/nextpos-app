@@ -126,7 +126,7 @@ class ProductFormScreen extends React.Component {
       inventoryData
     } = this.props
 
-    console.log('inventoryModalData', JSON.stringify(this.state?.inventoryModalData))
+    console.log('inventoryModalData', JSON.stringify(inventoryData))
 
     return (
       <ThemeKeyboardAwareScrollView>

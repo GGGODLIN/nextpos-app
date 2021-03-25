@@ -1,34 +1,31 @@
 import React from 'react'
-import {FlatList, TouchableOpacity, View, Text, Dimensions} from 'react-native'
+import {FlatList, Text, TouchableOpacity, View} from 'react-native'
 import {connect} from 'react-redux'
-import {Field, reduxForm} from 'redux-form'
-import ScreenHeader from "../components/ScreenHeader"
-import {LocaleContext} from '../locales/LocaleContext'
-import AddBtn from '../components/AddBtn'
-import {getCurrentClient} from '../actions/client'
-import LoadingScreen from "./LoadingScreen"
-import styles from '../styles'
-import {ThemeScrollView} from "../components/ThemeScrollView";
-import {StyledText} from "../components/StyledText";
-import {api, dispatchFetchRequest, dispatchFetchRequestWithOption, successMessage, warningMessage} from '../constants/Backend'
-import {NavigationEvents} from 'react-navigation'
-import {MainActionFlexButton, DeleteFlexButton} from "../components/ActionButtons";
-import DeleteBtn from '../components/DeleteBtn'
-import {ThemeContainer} from "../components/ThemeContainer";
-import {SearchBar, Button} from "react-native-elements";
 import Icon from 'react-native-vector-icons/Ionicons'
-import InputText from '../components/InputText'
-import {isRequired} from '../validators'
-import SegmentedControl from "../components/SegmentedControl";
-import {RenderDatePicker} from '../components/DateTimePicker'
-import moment from 'moment-timezone'
-import TimeZoneService from "../helpers/TimeZoneService";
-import {Accordion} from '@ant-design/react-native'
-import {formatDate} from '../actions'
-import Modal from 'react-native-modal';
-import OrderDetail from './OrderDetail';
+import {formatDate, getOrdersByDateRange, getOrdersByInvoiceNumber, formatCurrency} from '../actions'
+import {ListItem} from 'react-native-elements'
+import styles from '../styles'
+import {LocaleContext} from '../locales/LocaleContext'
+import {renderOrderState} from "../helpers/orderActions";
+import {NavigationEvents} from "react-navigation";
+import ScreenHeader from "../components/ScreenHeader";
+import OrderFilterForm from './OrderFilterForm'
+import LoadingScreen from "./LoadingScreen";
+import moment from "moment";
+import DateTimeFilterControlledForm from './DateTimeFilterControlledForm'
+import {ThemeContainer} from "../components/ThemeContainer";
+import {compose} from "redux";
+import {withContext} from "../helpers/contextHelper";
+import {StyledText} from "../components/StyledText";
+import BackendErrorScreen from "./BackendErrorScreen";
+import {Octicons} from '@expo/vector-icons';
+import * as Animatable from 'react-native-animatable';
+import AddBtn from '../components/AddBtn'
+import {api, dispatchFetchRequest, successMessage, dispatchFetchRequestWithOption} from '../constants/Backend'
+
 
 class InventoryOrderScreen extends React.Component {
+    handleViewRef = ref => this.view = ref;
     static navigationOptions = {
         header: null
     }
@@ -36,549 +33,265 @@ class InventoryOrderScreen extends React.Component {
 
     constructor(props, context) {
         super(props, context)
-        this.state = {
-            isLoading: false,
-            screenMode: 'normal',
-            membersData: [],
-            searchKeyword: null,
-            searching: false,
-            searchResults: [],
-            itemData: null,
-            showDatePicker: false,
-            activeSections: [],
-            modalVisible: false,
-            modalOrderId: null,
-        }
 
+        this.state = {
+            scrollPosition: 0,
+            searchFilter: {
+                searchTypeIndex: 0,
+                tableName: null,
+                dateRange: 0,
+                shiftId: null,
+                fromDate: new Date(),
+                toDate: new Date(),
+                invoiceNumber: null,
+                showFilter: false
+            },
+            selectedStatusOptions: new Set(['OPEN', 'IN_PROCESS', 'DELIVERED', 'SETTLED', 'COMPLETED', 'DELETED', 'CANCELLED', 'PAYMENT_IN_PROCESS'])
+        }
     }
 
     componentDidMount() {
-
-        this.props.getCurrentClient()
-        this.getMembers()
+        this.props.getOrdersByDateRange()
+        this.getInventoryOrders()
     }
 
-
-
-    refreshScreen = () => {
-        this.setState({
-            screenMode: 'normal',
-            itemData: null,
-            showDatePicker: false,
-        })
-        this.getMembers()
-        this.props?.reset()
-    }
-
-
-    getMembers = async () => {
-        //if need loading pending
-
-
-        await dispatchFetchRequest(api.membership.getMembers, {
-            method: 'GET',
-            withCredentials: true,
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-        }, response => {
-            response.json().then(data => {
-                this.setState({membersData: data?.results ?? [], isLoading: false})
-            })
-        }).then()
-    }
-
-    searchMember = (keyword) => {
-        if (keyword !== '') {
-            this.setState({searching: true})
-
-            dispatchFetchRequest(api.membership.getByPhone(keyword), {
+    getInventoryOrders = () => {
+        dispatchFetchRequestWithOption(
+            api.inventoryOrders.new,
+            {
                 method: 'GET',
                 withCredentials: true,
                 credentials: 'include',
-                headers: {}
-            }, response => {
-                response.json().then(data => {
-                    this.setState({
-                        searchResults: data.results,
-                        searching: false
-                    })
-                })
-            }).then()
-        }
-
-    }
-
-    handleSubmit = (values, memId = null) => {
-
-        const timezone = TimeZoneService.getTimeZone()
-        const i18nMoment = moment(values?.birthday).tz(timezone)
-        if (!!memId) {
-            let request = {
-                name: values?.name,
-                phoneNumber: values?.phoneNumber,
-                birthday: i18nMoment.tz(timezone).format("YYYY-MM-DD"),
-                gender: values?.gender === 0 ? 'MALE' : 'FEMALE',
-                tags: [values?.tags],
-            }
-            dispatchFetchRequestWithOption(api.membership.update(memId), {
-                method: 'POST',
-                withCredentials: true,
-                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(request)
-            }, {
-                defaultMessage: true
-            }, response => {
-
-                response.json().then(data => {
-                    this.refreshScreen()
-                })
-            }).then()
-        } else {
-            let request = {
-                name: values?.name,
-                phoneNumber: values?.phoneNumber,
-                birthday: i18nMoment.tz(timezone).format("YYYY-MM-DD"),
-                gender: values?.gender === 0 ? 'MALE' : 'FEMALE',
-                tags: [values?.tags],
-            }
-            dispatchFetchRequestWithOption(api.membership.creat, {
-                method: 'POST',
-                withCredentials: true,
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(request)
-            }, {
-                defaultMessage: true
-            }, response => {
-                response.json().then(data => {
-                    this.refreshScreen()
-                })
-
-            }).then()
-        }
-
-
-    }
-
-    handleDeleteMember = (id) => {
-        dispatchFetchRequestWithOption(api.membership.deleteById(id), {
-            method: 'DELETE',
-            withCredentials: true,
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-        }, {
-            defaultMessage: true
-        }, response => {
-
-            this.refreshScreen()
-        }).then()
-    }
-
-    handleGetMember = (id) => {
-        dispatchFetchRequest(api.membership.get(id), {
-            method: 'GET',
-            withCredentials: true,
-            credentials: 'include',
-            headers: {}
-        }, response => {
-            response.json().then(data => {
-                if (this.context.isTablet) {
-
-                    this.setState({screenMode: 'editForm', itemData: data})
                 }
-                else {
-                    this.props.navigation.navigate('MemberFormScreen', {
-                        data: data,
-                        refreshScreen: () => {this.refreshScreen()},
-                    })
+            }, {
+            defaultMessage: false,
+            ignoreErrorMessage: true
+        },
+            response => {
+                response.json().then(data => {
+                    console.log('getInventoryOrders', JSON.stringify(data))
+
+                })
+            },
+            response => {
+            }
+        ).then()
+    }
+
+    upButtonHandler = () => {
+        //OnCLick of Up button we scrolled the list to top
+        if (this.ListView_Ref != null) {
+            this.ListView_Ref?.scrollToOffset({offset: 0, animated: true})
+        }
+    }
+
+    keyExtractor = (order, index) => index.toString()
+
+    handleOrderSearch = values => {
+        const rangeTypeMapping = ['SHIFT', 'TODAY', 'RANGE', 'RANGE', 'RANGE']
+        const searchTypeIndex = values?.searchTypeIndex ?? 0
+        if (searchTypeIndex === 0) {
+            const tableName = values?.tableName ?? null
+            const dateRange = (typeof (values?.dateRange) === 'number') ? rangeTypeMapping?.[values.dateRange] : (values.dateRange != null ? values.dateRange : 'SHIFT')
+            const shiftId = values.shiftId != null ? values.shiftId : null
+            const fromDate = moment(values.fromDate).format("YYYY-MM-DDTHH:mm:ss")
+            const toDate = moment(values.toDate).format("YYYY-MM-DDTHH:mm:ss")
+
+            this.setState({
+                searchFilter: {
+                    ...this.state.searchFilter,
+                    searchTypeIndex: searchTypeIndex,
+                    tableName: tableName,
+                    dateRange: values.dateRange,
+                    shiftId: shiftId,
+                    fromDate: values.fromDate,
+                    toDate: values.toDate
                 }
             })
-        }).then()
+
+            this.props.getOrdersByDateRange(dateRange, shiftId, fromDate, toDate, tableName)
+        } else {
+            const invoiceNumber = values?.invoiceNumber ?? null
+            this.setState({
+                searchFilter: {
+                    ...this.state.searchFilter,
+                    searchTypeIndex: searchTypeIndex,
+                    invoiceNumber: invoiceNumber
+                }
+            })
+            this.props.getOrdersByInvoiceNumber(invoiceNumber)
+        }
     }
-    onActiveSectionsChange = activeSections => {
-        this.setState({activeSections})
+
+    renderItem = ({item}) => (
+        <ListItem
+            key={item.orderId}
+            title={
+                <View style={[styles.tableRowContainer]}>
+                    <View style={[styles.tableCellView, {flex: 2}]}>
+                        <StyledText>{item.serialId}</StyledText>
+                    </View>
+                    <View style={[styles.tableCellView, {flex: 3}]}>
+                        <StyledText>{formatDate(item.createdTime)}</StyledText>
+                    </View>
+                    <View style={[styles.tableCellView, {flex: 1}]}>
+                        <StyledText>${item.orderTotal}</StyledText>
+                    </View>
+                    <View style={[styles.tableCellView, {flex: 1, justifyContent: 'center'}]}>
+                        {renderOrderState(item.state, this.context?.customMainThemeColor)}
+                    </View>
+                </View>
+            }
+            onPress={() =>
+                this.props.navigation.navigate('OrderDetail', {
+                    orderId: item.orderId
+                })
+            }
+            bottomDivider
+            containerStyle={[styles.dynamicVerticalPadding(12), {padding: 0, backgroundColor: this.props.themeStyle.backgroundColor}, styles?.customBorderAndBackgroundColor(this.context)]}
+        />
+    )
+
+    //https://stackoverflow.com/questions/48061234/how-to-keep-scroll-position-using-flatlist-when-navigating-back-in-react-native
+    handleScroll = event => {
+        if (this.ListView_Ref != null) {
+            this.setState({scrollPosition: event.nativeEvent.contentOffset.y})
+        }
     }
 
-
-
-    Item = (item, isSearch = false) => {
-        return (
-            <View style={[styles.rowFront, isSearch && {borderBottomColor: this.contetx?.customMainThemeColor}]}>
-                <TouchableOpacity
-                    onPress={() => {
-                        this.props?.change(`name`, item?.name)
-                        this.props?.change(`phoneNumber`, item?.phoneNumber)
-                        this.props?.change(`birthday`, new Date(item?.birthday))
-                        this.props?.change(`gender`, item?.gender === 'FEMALE' ? 1 : 0)
-                        this.props?.change(`tags`, item?.tags?.[0])
-                        this.handleGetMember(item?.id)
-
-                    }}
-                    style={{flexDirection: 'row', justifyContent: 'space-between'}}
-                >
-                    <StyledText style={styles.rowFrontText}>{item?.name}</StyledText>
-
-                </TouchableOpacity>
-            </View >
-        );
+    bounce = (showFilter) => {
+        this.setState({showFilter: true}, () => {
+            if (showFilter) {
+                this.view.fadeOutUp(100).then(endState => this.setState({showFilter: false}))
+            } else {
+                this.view.fadeInDown(200).then(endState => this.setState({showFilter: true}))
+            }
+        })
     }
 
     render() {
-        const {navigation, offers, isLoading, handleSubmit} = this.props
-        const {t, isTablet, themeStyle, customMainThemeColor, customBackgroundColor} = this.context
+        const {getordersByDateRange, dateRange, isLoading, haveError, haveData, getordersByDateRangeFullData} = this.props
+        const {t, customMainThemeColor} = this.context
 
-        if (isLoading || this.state.isLoading) {
+        const orders = []
+        getordersByDateRange !== undefined && getordersByDateRange.forEach(order => {
+            if (this.state?.searchTypeIndex === 1) {
+                orders.push(order)
+            } else if (this.state?.selectedStatusOptions.has(order?.state)) {
+                orders.push(order)
+            } else {
+
+            }
+
+        })
+
+
+
+        if (isLoading) {
             return (
                 <LoadingScreen />
             )
-        } else {
-            if (isTablet) {
-                return (
-                    <ThemeContainer>
-                        <View style={[styles.fullWidthScreen]}>
-                            <NavigationEvents
-                                onWillFocus={() => {
-                                    this.refreshScreen()
-                                }}
-                            />
-                            <ScreenHeader title={t('settings.member')}
-                                parentFullScreen={true}
+        } else if (haveError) {
+            return (
+                <BackendErrorScreen />
+            )
+        } else if (haveData) {
+            return (
+                <ThemeContainer>
+                    <View style={[styles.fullWidthScreen]}>
+                        <NavigationEvents
+                            onWillFocus={() => {
+                                this.getInventoryOrders()
+                            }}
+                        />
+                        <ScreenHeader backNavigation={false}
+                            parentFullScreen={true}
+                            title={t('order.ordersTitle')}
+                            rightComponent={
+                                <AddBtn
+                                    onPress={() =>
+                                        this.props.navigation.navigate('InventoryOrderFormScreen')
+                                    }
+                                />
+                            }
+                        />
 
-                            />
-                            <Modal
-                                isVisible={this.state.modalVisible}
-                                backdropOpacity={0.7}
-                                onBackdropPress={() => this.setState({modalVisible: false})}
-                                useNativeDriver
-                                hideModalContentWhileAnimating
-                            >
-                                <OrderDetail orderId={this.state?.modalOrderId} closeModal={() => this.setState({modalVisible: false})} />
-                            </Modal>
-                            <View style={{flexDirection: 'row', flex: 1}}>
-                                <View style={{flex: 1, borderRightWidth: 1, borderColor: customMainThemeColor, paddingRight: 3}}>
-                                    <SearchBar placeholder={t('member.searchPrompt')}
-                                        onChangeText={this.searchMember}
-                                        onClear={() => {
-                                            this.setState({searchResults: []})
-                                        }}
-                                        value={this.state.searchKeyword}
-                                        showLoading={this.state.searching}
-                                        lightTheme={false}
-                                        // reset the container style.
-                                        containerStyle={{
-                                            padding: 4,
-                                            borderRadius: 0,
-                                            borderWidth: 0,
-                                            borderTopWidth: 0,
-                                            borderBottomWidth: 0,
-                                            backgroundColor: customMainThemeColor
-                                        }}
-                                        inputStyle={{backgroundColor: customBackgroundColor}}
-                                        inputContainerStyle={{borderRadius: 0, backgroundColor: customBackgroundColor}}
-                                    />
 
-                                    {this.state.searchResults?.length === 0 || <FlatList
-                                        style={{maxHeight: Dimensions.get('window').height / 3, paddingBottom: 1}}
-                                        data={this.state.searchResults}
-                                        renderItem={({item}) => this.Item(item, true)}
-                                    />}
 
-                                    {this.state.searchResults?.length === 0 && <FlatList
-                                        data={this?.state?.membersData ?? []}
-                                        renderItem={({item}) => this.Item(item)}
-                                        keyExtractor={(item) => item?.id}
-                                        ListEmptyComponent={
-                                            <View>
-                                                <StyledText style={styles.messageBlock}>{t('general.noData')}</StyledText>
-                                            </View>
-                                        }
-                                    />}
-
+                        <View style={{flex: 3}}>
+                            <View style={[styles.sectionBar]}>
+                                <View style={{flex: 2}}>
+                                    <Text style={styles?.sectionBarTextSmall(customMainThemeColor)}>{t('order.orderId')}</Text>
                                 </View>
 
-                                {this.state.screenMode === 'normal' && <View style={{flex: 3, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center'}}>
-                                    <Button
-                                        icon={
-                                            <Icon name="md-add" size={32} color={customMainThemeColor} />
-                                        }
-                                        type='outline'
-                                        raised
-                                        onPress={() => this.setState({screenMode: 'newForm'})}
-                                        buttonStyle={{minWidth: 320, borderColor: customMainThemeColor, backgroundColor: customBackgroundColor}}
-                                        title={t('member.createMember')}
-                                        titleStyle={{marginLeft: 10, color: customMainThemeColor}}
-                                    />
-                                </View>}
+                                <View style={{flex: 3}}>
+                                    <Text style={styles?.sectionBarTextSmall(customMainThemeColor)}>{t('order.date')}</Text>
+                                </View>
 
-                                {(this.state.screenMode === 'newForm' || this.state.screenMode === 'editForm') && <View style={{flex: 3, paddingHorizontal: 10, justifyContent: 'flex-start'}}>
-                                    <ThemeScrollView style={{minHeight: 200, flex: 1}}>
-                                        <View style={styles.fieldContainer}>
-                                            <View style={[styles.tableCellView, {flex: 1}]}>
-                                                <StyledText style={styles.fieldTitle}>{t('member.name')}</StyledText>
-                                            </View>
-                                            <View style={[styles.tableCellView, {flex: 3, justifyContent: 'flex-end'}]}>
-                                                <Field
-                                                    name="name"
-                                                    component={InputText}
-                                                    placeholder={t('member.name')}
-                                                    editable={true}
-                                                    validate={[isRequired]}
-                                                />
-                                            </View>
-                                        </View>
-                                        <View style={styles.fieldContainer}>
-                                            <View style={[styles.tableCellView, {flex: 1}]}>
-                                                <StyledText style={styles.fieldTitle}>{t('member.phoneNumber')}</StyledText>
-                                            </View>
-                                            <View style={[styles.tableCellView, {flex: 3, justifyContent: 'flex-end'}]}>
-                                                <Field
-                                                    name="phoneNumber"
-                                                    component={InputText}
-                                                    placeholder={t('member.phoneNumber')}
-                                                    editable={this.state.screenMode !== 'editForm'}
-                                                    validate={[isRequired]}
-                                                />
-                                            </View>
-                                        </View>
-
-
-                                        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-                                            <View style={{flex: 1}}>
-                                                <StyledText style={styles.fieldTitle}>{t('member.gender')}</StyledText>
-                                            </View>
-                                            <View style={{flexDirection: 'column', flex: 3, maxWidth: 640, paddingVertical: 10, }}>
-                                                <Field
-                                                    name="gender"
-                                                    component={SegmentedControl}
-                                                    values={[t(`member.MALE`), t(`member.FEMALE`)]}
-                                                    validate={[isRequired]}
-                                                />
-                                            </View>
-                                        </View>
-                                        <View style={styles.fieldContainer}>
-                                            <View style={[styles.tableCellView, {flex: 1}]}>
-                                                <StyledText style={styles.fieldTitle}>{t('member.birthday')}</StyledText>
-                                            </View>
-                                            <View style={[styles.tableCellView, {flex: 3, justifyContent: 'flex-end'}]}>
-
-                                                <Field
-                                                    name={`birthday`}
-                                                    component={RenderDatePicker}
-                                                    mode='date'
-                                                    onChange={(date) => {}}
-                                                    placeholder={t('order.fromDate')}
-                                                    isShow={this.state.showDatePicker ?? false}
-                                                    showDatepicker={() => this.setState({showDatePicker: !this.state?.showDatePicker})}
-
-                                                />
-                                            </View>
-                                        </View>
-                                        <View style={styles.fieldContainer}>
-                                            <View style={[styles.tableCellView, {flex: 1}]}>
-                                                <StyledText style={styles.fieldTitle}>{t('member.tags')}</StyledText>
-                                            </View>
-                                            <View style={[styles.tableCellView, {flex: 3, justifyContent: 'flex-end'}]}>
-                                                <Field
-                                                    name="tags"
-                                                    component={InputText}
-                                                    placeholder={t('member.tags')}
-                                                    editable={true}
-                                                />
-                                            </View>
-                                        </View>
-
-                                        {this.state.screenMode === 'editForm' && <View style={styles.fieldContainer}>
-                                            <Accordion
-                                                onChange={this.onActiveSectionsChange}
-                                                activeSections={this.state.activeSections}
-                                                style={[styles.childContainer, {borderWidth: 0}]}
-                                                sectionContainerStyle={{
-                                                    borderWidth: 1, ...themeStyle,
-                                                    marginBottom: 8
-                                                }}
-                                                expandMultiple
-                                            >
-                                                <Accordion.Panel
-                                                    header={<View style={[styles.sectionTitleContainer, {flex: 1}]}>
-                                                        <StyledText style={[styles.sectionTitleText]}>
-                                                            {t('member.recentOrders')}
-                                                        </StyledText>
-                                                    </View>}
-                                                >
-                                                    <View>
-
-                                                        {this.state?.itemData?.recentOrders?.map((order) => {
-                                                            return (
-                                                                <TouchableOpacity
-                                                                    onPress={() => this.setState({modalVisible: true, modalOrderId: order?.orderId})}
-                                                                    style={[styles.tableRowContainer, {borderColor: customMainThemeColor, borderWidth: 1, borderRadius: 10, margin: 5}]}>
-
-                                                                    <View style={[styles.tableCellView, {flex: 1}]}>
-                                                                        <StyledText>{formatDate(order.orderDate)}</StyledText>
-                                                                    </View>
-                                                                    <View style={[styles.tableCellView, {flex: 1, justifyContent: 'flex-end'}]}>
-                                                                        <StyledText>${order.orderTotal}</StyledText>
-                                                                    </View>
-
-                                                                </TouchableOpacity>
-                                                            )
-                                                        })}
-
-                                                    </View>
-                                                </Accordion.Panel>
-                                                <Accordion.Panel
-                                                    header={<View style={[styles.sectionTitleContainer, {flex: 1}]}>
-                                                        <StyledText style={[styles.sectionTitleText]}>
-                                                            {t('member.topRankings')}
-                                                        </StyledText>
-                                                    </View>}
-                                                >
-                                                    <View>
-                                                        <View style={styles.sectionContainer}>
-                                                            {this.state?.itemData?.topRankings?.map((item) => {
-                                                                return (
-                                                                    <View style={[styles.tableRowContainer]}>
-
-                                                                        <View style={[styles.tableCellView, {flex: 1}]}>
-                                                                            <StyledText>{item.productName}</StyledText>
-                                                                        </View>
-                                                                        <View style={[styles.tableCellView, {flex: 1, justifyContent: 'flex-end'}]}>
-                                                                            <StyledText>x {item.quantity}</StyledText>
-                                                                        </View>
-
-                                                                    </View>
-                                                                )
-                                                            })}
-                                                        </View>
-                                                    </View>
-                                                </Accordion.Panel>
-                                            </Accordion>
-                                        </View>}
-
-
-
-                                    </ThemeScrollView>
-                                    <View style={[{justifyContent: 'flex-end', paddingHorizontal: '20%'}]}>
-                                        <TouchableOpacity
-                                            onPress={handleSubmit(data => {
-                                                this.handleSubmit(data, this.state?.itemData?.id)
-                                            })}
-                                        >
-                                            <Text style={[styles?.bottomActionButton(customMainThemeColor), styles?.actionButton(customMainThemeColor)]}>
-                                                {t('action.save')}
-                                            </Text>
-
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                this.props?.reset()
-                                                this.setState({screenMode: 'normal'})
-                                            }}
-                                        >
-                                            <Text style={[styles?.bottomActionButton(customMainThemeColor), styles?.secondActionButton(this.context)]}>
-                                                {t('action.cancel')}
-                                            </Text>
-                                        </TouchableOpacity>
-
-                                        {this.state.screenMode === 'editForm' && <DeleteBtn handleDeleteAction={() => this.handleDeleteMember(this.state?.itemData?.id)} />}
-                                    </View>
-                                </View>}
-                            </View>
-                        </View>
-                    </ThemeContainer >
-                )
-            } else {
-                return (
-                    <ThemeContainer>
-                        <View style={[styles.fullWidthScreen]}>
-                            <NavigationEvents
-                                onWillFocus={() => {
-                                    this.refreshScreen()
-                                }}
-                            />
-                            <ScreenHeader title={t('settings.member')}
-                                parentFullScreen={true}
-                                rightComponent={
-                                    <AddBtn
-                                        onPress={() => navigation.navigate('MemberFormScreen', {data: null, refreshScreen: this.refreshScreen, })}
-                                    />}
-
-                            />
-                            <View style={{flexDirection: 'row', flex: 1}}>
                                 <View style={{flex: 1}}>
-                                    <SearchBar placeholder={t('member.searchPrompt')}
-                                        onChangeText={this.searchMember}
-                                        onClear={() => {
-                                            this.setState({searchResults: []})
-                                        }}
-                                        value={this.state.searchKeyword}
-                                        showLoading={this.state.searching}
-                                        lightTheme={false}
-                                        containerStyle={{
-                                            padding: 4,
-                                            borderRadius: 0,
-                                            borderWidth: 0,
-                                            borderTopWidth: 0,
-                                            borderBottomWidth: 0,
-                                            backgroundColor: customMainThemeColor
-                                        }}
-                                        inputStyle={{backgroundColor: customBackgroundColor}}
-                                        inputContainerStyle={{borderRadius: 0, backgroundColor: customBackgroundColor}}
-                                    />
-
-                                    {this.state.searchResults?.length === 0 || <FlatList
-                                        style={{maxHeight: Dimensions.get('window').height / 3, paddingBottom: 24}}
-                                        data={this.state.searchResults}
-                                        renderItem={({item}) => this.Item(item, true)}
-                                    />}
-
-                                    {this.state.searchResults?.length === 0 && <FlatList
-                                        data={this?.state?.membersData ?? []}
-                                        renderItem={({item}) => this.Item(item)}
-                                        keyExtractor={(item) => item?.id}
-                                        ListEmptyComponent={
-                                            <View>
-                                                <StyledText style={styles.messageBlock}>{t('general.noData')}</StyledText>
-                                            </View>
-                                        }
-                                    />}
-
+                                    <Text style={[styles?.sectionBarTextSmall(customMainThemeColor)]}>{t('order.total')}</Text>
                                 </View>
 
-
-
-
+                                <View style={{flex: 1, alignItems: 'center'}}>
+                                    <Text style={[styles?.sectionBarTextSmall(customMainThemeColor)]}>{t('order.orderStatus')}</Text>
+                                </View>
                             </View>
-                        </View>
-                    </ThemeContainer >
-                )
-            }
-        }
+                            <FlatList
+                                keyExtractor={this.keyExtractor}
+                                data={orders}
+                                renderItem={this.renderItem}
+                                ListEmptyComponent={
+                                    <View>
+                                        <StyledText style={styles.messageBlock}>{t('order.noOrder')}</StyledText>
+                                    </View>
+                                }
+                                ref={ref => {
+                                    this.ListView_Ref = ref
+                                }}
+                                onScroll={this.handleScroll}
+                            />
 
+                            {this.state.scrollPosition > 0 ? (
+                                <TouchableOpacity
+                                    activeOpacity={0.5}
+                                    onPress={this.upButtonHandler}
+                                    style={styles.upButton}
+                                >
+                                    <Icon
+                                        name={'arrow-up'}
+                                        size={32}
+                                        style={[styles?.buttonIconStyle(customMainThemeColor), {marginRight: 10}]}
+                                    />
+                                </TouchableOpacity>
+                            ) : null}
+                        </View>
+                    </View>
+                </ThemeContainer>
+            )
+        } else {
+            return null
+        }
     }
 }
 
 const mapStateToProps = state => ({
-    isLoading: state.offers.loading,
-    client: state.client.data,
+    getordersByDateRange: state.ordersbydaterange.data.orders,
+    getordersByDateRangeFullData: state.ordersbydaterange.data,
+    dateRange: state.ordersbydaterange.data.dateRange,
+    haveData: state.ordersbydaterange.haveData,
+    haveError: state.ordersbydaterange.haveError,
+    isLoading: state.ordersbydaterange.loading
 })
-
-const mapDispatchToProps = dispatch => ({
+const mapDispatchToProps = (dispatch, props) => ({
     dispatch,
-    getCurrentClient: () => dispatch(getCurrentClient())
+    getOrdersByDateRange: (dateRange, shiftId, fromDate, toDate, tableName) => dispatch(getOrdersByDateRange(dateRange, shiftId, fromDate, toDate, tableName)),
+    getOrdersByInvoiceNumber: (invoiceNumber) => dispatch(getOrdersByInvoiceNumber(invoiceNumber))
 })
 
-InventoryOrderScreen = reduxForm({
-    form: 'inventoryOrderForm'
-})(InventoryOrderScreen)
-
-export default connect(mapStateToProps, mapDispatchToProps)(InventoryOrderScreen)
+const enhance = compose(
+    connect(mapStateToProps, mapDispatchToProps),
+    withContext
+)
+export default enhance(InventoryOrderScreen)
