@@ -46,7 +46,8 @@ class InventoryOrderScreen extends React.Component {
                 invoiceNumber: null,
                 showFilter: false
             },
-            selectedStatusOptions: new Set(['OPEN', 'IN_PROCESS', 'DELIVERED', 'SETTLED', 'COMPLETED', 'DELETED', 'CANCELLED', 'PAYMENT_IN_PROCESS'])
+            selectedStatusOptions: new Set(['OPEN', 'IN_PROCESS', 'DELIVERED', 'SETTLED', 'COMPLETED', 'DELETED', 'CANCELLED', 'PAYMENT_IN_PROCESS']),
+            inventoryOrdersData: []
         }
     }
 
@@ -72,7 +73,7 @@ class InventoryOrderScreen extends React.Component {
             response => {
                 response.json().then(data => {
                     console.log('getInventoryOrders', JSON.stringify(data))
-
+                    this.setState({inventoryOrdersData: data?.results})
                 })
             },
             response => {
@@ -134,7 +135,7 @@ class InventoryOrderScreen extends React.Component {
                         <StyledText>{item.serialId}</StyledText>
                     </View>
                     <View style={[styles.tableCellView, {flex: 3}]}>
-                        <StyledText>{formatDate(item.createdTime)}</StyledText>
+                        <StyledText>{formatDate(item?.orderDate)}</StyledText>
                     </View>
                     <View style={[styles.tableCellView, {flex: 1}]}>
                         <StyledText>${item.orderTotal}</StyledText>
@@ -145,8 +146,8 @@ class InventoryOrderScreen extends React.Component {
                 </View>
             }
             onPress={() =>
-                this.props.navigation.navigate('OrderDetail', {
-                    orderId: item.orderId
+                this.props.navigation.navigate('InventoryOrderFormScreen', {
+                    data: item
                 })
             }
             bottomDivider
@@ -240,7 +241,7 @@ class InventoryOrderScreen extends React.Component {
                             </View>
                             <FlatList
                                 keyExtractor={this.keyExtractor}
-                                data={orders}
+                                data={this.state?.inventoryOrdersData}
                                 renderItem={this.renderItem}
                                 ListEmptyComponent={
                                     <View>

@@ -99,6 +99,9 @@ export const api = {
     deleteQuantity: (id, sku) => {
       return `${apiRoot}/inventories/${id}/quantities/${sku}`
     },
+    getByKeyword: key => {
+      return `${apiRoot}/inventories?keyword=${key}`
+    },
   },
   inventoryOrders: {
     new: `${apiRoot}/inventoryOrders`,
