@@ -1,6 +1,6 @@
 import React, {useEffect} from 'react'
 import {Field, FieldArray, reduxForm} from 'redux-form'
-import {Text, TouchableOpacity, View, FlatList} from 'react-native'
+import {Text, TouchableOpacity, View, FlatList, Alert} from 'react-native'
 import Icon from 'react-native-vector-icons/AntDesign'
 import InputText from '../components/InputText'
 import RNSwitch from '../components/RNSwitch'
@@ -38,7 +38,7 @@ class InventoryOrderFormScreen extends React.Component {
         console.log(props.navigation.state.params)
 
         this.state = {
-            data: null,
+            data: props?.navigation?.state?.params?.data ?? null,
             initialValuesCount: props?.initialValues?.optionValues?.length ?? 0,
             isShowDatePicker: false,
             inventoryModalData: null,
@@ -46,36 +46,18 @@ class InventoryOrderFormScreen extends React.Component {
             inventoryFormValues: props?.navigation?.state?.params?.data?.items ?? []
         }
 
-        context.localize({
-            en: {
-                inventoryOrder: {
-                    newFormTitle: '新增庫存',
-                    editFormTitle: '編輯庫存',
-                    orderDate: '訂單日期',
-                    supplierId: '進貨商編號',
-                    supplierOrderId: '進貨單編號',
-                    sku: 'SKU',
-                    quantity: '數量'
-                }
-            },
-            zh: {
-                inventoryOrder: {
-                    newFormTitle: '新增庫存',
-                    editFormTitle: '編輯庫存',
-                    orderDate: '訂單日期',
-                    supplierId: '進貨商編號',
-                    supplierOrderId: '進貨單編號',
-                    sku: 'SKU',
-                    quantity: '數量'
-                }
-            }
-        })
+
     }
     shouldComponentUpdate(nextProps, nextState) {
         return nextState !== this.state;
     }
 
     componentDidMount() {
+        if (!!this.props?.navigation?.state?.params?.data) {
+            this.props?.change(`supplierId`, this.props?.navigation?.state?.params?.data?.supplierId)
+            this.props?.change(`supplierOrderId`, this.props?.navigation?.state?.params?.data?.supplierOrderId)
+            this.props?.change(`orderDate`, new Date(this.props?.navigation?.state?.params?.data?.orderDate))
+        }
 
     }
     exchangeAnimate = (from, to, callback) => {
@@ -114,8 +96,34 @@ class InventoryOrderFormScreen extends React.Component {
         },
             response => {
                 response.json().then(data => {
-                    console.log('getInventoryOrders', JSON.stringify(data))
+                    this.props.navigation.goBack()
+                })
+            },
+            response => {
+            }
+        ).then()
+    }
 
+    handleUpdate = (data) => {
+        let request = {...data, items: this.state?.inventoryFormValues}
+        console.log('handleSubmit', JSON.stringify(request))
+        dispatchFetchRequestWithOption(
+            api.inventoryOrders.getById(this.props?.navigation?.state?.params?.data?.id),
+            {
+                method: 'POST',
+                withCredentials: true,
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }, {
+            defaultMessage: true,
+            ignoreErrorMessage: false
+        },
+            response => {
+                response.json().then(data => {
+                    this.props.navigation.goBack()
                 })
             },
             response => {
@@ -130,6 +138,39 @@ class InventoryOrderFormScreen extends React.Component {
         this.setState({inventoryFormValues: tempArr})
     }
 
+    handleInventoryFormUpdate = (values, index) => {
+        let tempArr = [...this.state?.inventoryFormValues]
+        tempArr.splice(index, 1, values)
+        this.setState({inventoryFormValues: tempArr})
+    }
+
+    handleItemPress = (data, index) => {
+        this.setState({inventoryModalData: {...data, dataIndex: index}, isShow: true})
+    }
+
+    handleInventoryDelete = (data, index) => {
+        Alert.alert(
+            `${this.context.t('action.confirmMessageTitle')}`,
+            `${this.context.t('action.confirmMessage')}`,
+            [
+                {
+                    text: `${this.context.t('action.yes')}`,
+                    onPress: () => {
+                        let tempArr = [...this.state?.inventoryFormValues]
+                        tempArr.splice(index, 1)
+                        this.setState({inventoryFormValues: tempArr})
+                    }
+                },
+                {
+                    text: `${this.context.t('action.no')}`,
+                    onPress: () => console.log('Cancelled'),
+                    style: 'cancel'
+                }
+            ]
+        )
+
+    }
+
     render() {
         const {t, themeStyle, isTablet, customMainThemeColor, customBackgroundColor} = this.context
         const {handleSubmit} = this.props
@@ -141,7 +182,7 @@ class InventoryOrderFormScreen extends React.Component {
         return (
             <ThemeScrollView >
                 <View style={[styles.fullWidthScreen]}>
-                    <ScreenHeader title={t('inventoryOrder.newFormTitle')} />
+                    <ScreenHeader title={t(!!this.state?.data ? 'inventoryOrder.editFormTitle' : 'inventoryOrder.newFormTitle')} />
                     <Modal
                         isVisible={this.state?.isShow}
                         useNativeDriver
@@ -158,6 +199,7 @@ class InventoryOrderFormScreen extends React.Component {
                                 <InventoryForm
                                     initialValues={this.state?.inventoryModalData}
                                     onSubmit={this.handleInventoryFormSubmit}
+                                    handleUpdate={this.handleInventoryFormUpdate}
                                     handleCancel={() => this.setState({isShow: false})}
                                 />
                             </View>
@@ -174,12 +216,11 @@ class InventoryOrderFormScreen extends React.Component {
                                 <Field
                                     name={`orderDate`}
                                     component={RenderDateTimePicker}
-                                    onChange={this.handlegetFromDate}
+                                    onChange={() => {}}
                                     placeholder={t('inventoryOrder.orderDate')}
                                     isShow={this.state.isShowDatePicker ?? false}
                                     showDatepicker={() => this.setState({isShowDatePicker: !this.state?.isShowDatePicker})}
-                                    defaultValue={this.state?.data?.orderDate ?? new Date()}
-                                    readonly={!!this.state?.data}
+
                                 />
 
                             </View>
@@ -224,7 +265,7 @@ class InventoryOrderFormScreen extends React.Component {
                                 </Text>
                             </TouchableOpacity>
                             <StyledText style={styles.sectionTitleText}>{t('inventoryOrder.sku')}</StyledText>
-                            <DeleteBtn handleDeleteAction={() => {}} text={t('inventory.deleteAllInventory')} />
+                            <DeleteBtn handleDeleteAction={() => {this.setState({inventoryFormValues: []})}} text={t('inventory.deleteAllInventory')} />
 
                         </View>
                         {this.state?.inventoryFormValues?.length > 0 ?
@@ -234,8 +275,8 @@ class InventoryOrderFormScreen extends React.Component {
                                     tableTopBar={[t('inventory.sku'), t('inventory.quantity'), t('order.unitPrice'),]}
                                     tableContent={['sku', 'quantity', 'unitPrice']}
                                     occupy={[1, 1, 1]}
-                                    itemOnPress={(data) => {}}
-                                //moreActions={[(data) => this.handleItemPress(data), (data) => this.handleInventoryDelete(data)]}
+                                    itemOnPress={(data, index) => this.handleItemPress(data, index)}
+                                    moreActions={[(data, index) => this.handleItemPress(data, index), (data, index) => this.handleInventoryDelete(data, index)]}
                                 />
                             </View>
                             :
@@ -250,7 +291,10 @@ class InventoryOrderFormScreen extends React.Component {
                     </View>
                     <View style={[styles.bottom, styles.horizontalMargin]}>
                         <TouchableOpacity onPress={handleSubmit(data => {
-                            this.handleSubmit(data)
+                            if (!this.state?.data)
+                                this.handleSubmit(data)
+                            else
+                                this.handleUpdate(data)
                         })}>
                             <Text style={[styles?.bottomActionButton(customMainThemeColor), styles?.actionButton(customMainThemeColor)]}>
                                 {t('action.save')}
@@ -302,7 +346,7 @@ class InventoryForm extends React.Component {
         super(props, context)
         this.state = {
             openScanView: false,
-            searchKeyword: null,
+            searchKeyword: props?.initialValues?.sku ?? null,
             searching: false,
             searchResults: [],
         }
@@ -327,13 +371,15 @@ class InventoryForm extends React.Component {
                     console.log('searchSku', JSON.stringify(data))
                     this.setState({
                         searchResults: data.results,
-                        searching: false
+                        searching: false,
+                        searchKeyword: keyword
                     })
                 })
             }).then()
         } else {
             this.setState({
-                searchResults: []
+                searchResults: [],
+                searching: false,
             })
         }
 
@@ -350,7 +396,7 @@ class InventoryForm extends React.Component {
                     }}
                     style={{flexDirection: 'row', justifyContent: 'space-between'}}
                 >
-                    <StyledText style={styles.rowFrontText}>{item?.sku}</StyledText>
+                    <StyledText style={styles.rowFrontText}>{item?.productName}-{item?.sku}{!!item?.skuName && `(${item?.skuName})`}</StyledText>
 
                 </TouchableOpacity>
             </View >
@@ -467,7 +513,17 @@ class InventoryForm extends React.Component {
                         paddingHorizontal: 10
                     }}>
 
-                        <TouchableOpacity onPress={this.props?.handleSubmit}>
+                        <TouchableOpacity onPress={this.props?.handleSubmit(data => {
+                            if (!!this.props?.initialValues) {
+                                this.props?.handleUpdate(data, this.props?.initialValues?.dataIndex)
+                                this.props?.handleCancel()
+                            } else {
+                                this.props?.onSubmit(data)
+                                this.props?.reset()
+                                this.setState({searchResults: [], searchKeyword: null})
+                            }
+
+                        })}>
                             <Text style={[styles?.bottomActionButton(customMainThemeColor), styles?.actionButton(customMainThemeColor)]}>
                                 {t('action.save')}
                             </Text>

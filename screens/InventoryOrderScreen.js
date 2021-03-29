@@ -49,6 +49,31 @@ class InventoryOrderScreen extends React.Component {
             selectedStatusOptions: new Set(['OPEN', 'IN_PROCESS', 'DELIVERED', 'SETTLED', 'COMPLETED', 'DELETED', 'CANCELLED', 'PAYMENT_IN_PROCESS']),
             inventoryOrdersData: []
         }
+
+        context.localize({
+            en: {
+                inventoryOrder: {
+                    newFormTitle: '新增庫存',
+                    editFormTitle: '編輯庫存',
+                    orderDate: '訂單日期',
+                    supplierId: '進貨商編號',
+                    supplierOrderId: '進貨單編號',
+                    sku: 'SKU',
+                    quantity: '數量'
+                }
+            },
+            zh: {
+                inventoryOrder: {
+                    newFormTitle: '新增庫存',
+                    editFormTitle: '編輯庫存',
+                    orderDate: '訂單日期',
+                    supplierId: '進貨商編號',
+                    supplierOrderId: '進貨單編號',
+                    sku: 'SKU',
+                    quantity: '數量'
+                }
+            }
+        })
     }
 
     componentDidMount() {
@@ -131,18 +156,16 @@ class InventoryOrderScreen extends React.Component {
             key={item.orderId}
             title={
                 <View style={[styles.tableRowContainer]}>
-                    <View style={[styles.tableCellView, {flex: 2}]}>
-                        <StyledText>{item.serialId}</StyledText>
-                    </View>
                     <View style={[styles.tableCellView, {flex: 3}]}>
+                        <StyledText>{item.id}</StyledText>
+                    </View>
+                    <View style={[styles.tableCellView, {flex: 2}]}>
+                        <StyledText>{item?.supplierOrderId}</StyledText>
+                    </View>
+                    <View style={[styles.tableCellView, {flex: 3, justifyContent: 'flex-end'}]}>
                         <StyledText>{formatDate(item?.orderDate)}</StyledText>
                     </View>
-                    <View style={[styles.tableCellView, {flex: 1}]}>
-                        <StyledText>${item.orderTotal}</StyledText>
-                    </View>
-                    <View style={[styles.tableCellView, {flex: 1, justifyContent: 'center'}]}>
-                        {renderOrderState(item.state, this.context?.customMainThemeColor)}
-                    </View>
+
                 </View>
             }
             onPress={() =>
@@ -207,9 +230,9 @@ class InventoryOrderScreen extends React.Component {
                                 this.getInventoryOrders()
                             }}
                         />
-                        <ScreenHeader backNavigation={false}
+                        <ScreenHeader backNavigation={true}
                             parentFullScreen={true}
-                            title={t('order.ordersTitle')}
+                            title={t('inventory.title')}
                             rightComponent={
                                 <AddBtn
                                     onPress={() =>
@@ -223,21 +246,19 @@ class InventoryOrderScreen extends React.Component {
 
                         <View style={{flex: 3}}>
                             <View style={[styles.sectionBar]}>
+                                <View style={{flex: 3}}>
+                                    <Text style={styles?.sectionBarTextSmall(customMainThemeColor)}>{t('inventoryOrder.supplierOrderId')}</Text>
+                                </View>
+
                                 <View style={{flex: 2}}>
-                                    <Text style={styles?.sectionBarTextSmall(customMainThemeColor)}>{t('order.orderId')}</Text>
+                                    <Text style={styles?.sectionBarTextSmall(customMainThemeColor)}>{t('inventoryOrder.supplierId')}</Text>
                                 </View>
 
                                 <View style={{flex: 3}}>
-                                    <Text style={styles?.sectionBarTextSmall(customMainThemeColor)}>{t('order.date')}</Text>
+                                    <Text style={[styles?.sectionBarTextSmall(customMainThemeColor), {textAlign: 'right'}]}>{t('inventoryOrder.orderDate')}</Text>
                                 </View>
 
-                                <View style={{flex: 1}}>
-                                    <Text style={[styles?.sectionBarTextSmall(customMainThemeColor)]}>{t('order.total')}</Text>
-                                </View>
 
-                                <View style={{flex: 1, alignItems: 'center'}}>
-                                    <Text style={[styles?.sectionBarTextSmall(customMainThemeColor)]}>{t('order.orderStatus')}</Text>
-                                </View>
                             </View>
                             <FlatList
                                 keyExtractor={this.keyExtractor}
