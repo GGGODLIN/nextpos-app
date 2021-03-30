@@ -475,7 +475,31 @@ class InventoryForm extends React.Component {
                             style={{height: 150, paddingBottom: 1}}
                             data={this.state.searchResults}
                             renderItem={({item}) => this.Item(item, true)}
-
+                            ListEmptyComponent={
+                                <View>
+                                    <StyledText style={styles.messageBlock}>{t('general.noData')}</StyledText>
+                                    <View style={{flexDirection: 'row', width: '100%'}}>
+                                        <TouchableOpacity
+                                            style={{flex: 1, marginHorizontal: 10}}
+                                            onPress={() => {this.props?.handleCancel()}}>
+                                            <Text
+                                                style={[styles?.bottomActionButton(customMainThemeColor), styles?.secondActionButton(this.context)]}
+                                            >
+                                                {t('action.cancel')}
+                                            </Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={{flex: 1, marginHorizontal: 10}}
+                                            onPress={() => {this.props?.handleCancel()}}>
+                                            <Text
+                                                style={[styles?.bottomActionButton(customMainThemeColor), styles?.secondActionButton(this.context)]}
+                                            >
+                                                {t('action.cancel')}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            }
                         />}
 
 
